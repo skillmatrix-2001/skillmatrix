@@ -1,4 +1,4 @@
-# 🚧 SkillMatrix — Under Development
+# 🚧 SkillMatrix — FOR DEPLOYEMENT
 
 ## 📌 Problem Statement
 
