@@ -11,6 +11,7 @@ export default function LoginPage() {
     password: '',
     role: 'student',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,11 +37,10 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store user data and token
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
-        
-        // Redirect based on role
+        window.dispatchEvent(new Event('authChange'));
+
         if (data.user.role === 'student') {
           router.push('/feed');
         } else if (data.user.role === 'staff') {
@@ -59,38 +59,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+    <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ maxWidth: 400, width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ color: '#E5E7EB', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Sign in</h2>
+          <p style={{ color: '#6B7280', fontSize: 14 }}>
             Or{' '}
-            <Link href="/register" className="font-medium text-emerald-600 hover:text-emerald-500">
+            <Link href="/register" style={{ color: '#7C5CFF', textDecoration: 'none' }}>
               register as a student
             </Link>
           </p>
         </div>
-        
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+
+        <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', color: '#F87171', fontSize: 14 }}>
                 {error}
               </div>
             )}
-            
+
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                I am a
-              </label>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>I am a</label>
               <select
-                id="role"
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                style={{
+                  width: '100%', background: '#0B0D12', border: '1px solid #222634',
+                  borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
+                  outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
+                  fontFamily: 'inherit', cursor: 'pointer'
+                }}
                 required
               >
                 <option value="student">Student</option>
@@ -98,59 +98,88 @@ export default function LoginPage() {
                 <option value="admin">Admin</option>
               </select>
             </div>
-            
+
             <div>
-              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.role === 'student' ? 'Register Number' : 
-                 formData.role === 'staff' ? 'Staff ID' : 'Username'}
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+                {formData.role === 'student' ? 'Register Number' : formData.role === 'staff' ? 'Staff ID' : 'Username'}
               </label>
               <input
-                id="identifier"
                 name="identifier"
                 type="text"
                 required
                 value={formData.identifier}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder={
-                  formData.role === 'student' ? '9513xxxxxx' : 
-                  formData.role === 'staff' ? 'STAFF123' : 'admin'
-                }
+                placeholder={formData.role === 'student' ? '9513xxxxxx' : formData.role === 'staff' ? 'STAFF123' : 'admin'}
+                style={{
+                  width: '100%', background: '#0B0D12', border: '1px solid #222634',
+                  borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
+                  outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
+                  fontFamily: 'inherit'
+                }}
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder="••••••••"
-              />
-            </div>
-            
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  style={{
+                    width: '100%', background: '#0B0D12', border: '1px solid #222634',
+                    borderRadius: 8, padding: '10px 14px', paddingRight: '40px',
+                    color: '#E5E7EB', fontSize: 14, outline: 'none',
+                    transition: 'border-color 0.2s', boxSizing: 'border-box',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: 0, display: 'flex', alignItems: 'center',
+                    color: '#6B7280'
+                  }}
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%', background: '#7C5CFF', color: '#fff', border: 'none',
+                borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 500,
+                cursor: 'pointer', transition: 'background 0.2s', fontFamily: 'inherit'
+              }}
+              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOut={(e) => (e.target.style.background = '#7C5CFF')}
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
 
-            <div className="text-center">
-             <Link href="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              Forgot Password?
-             </Link>
-           </div>
+            <div style={{ textAlign: 'center' }}>
+              <Link href="/forgot-password" style={{ color: '#7C5CFF', fontSize: 14, textDecoration: 'none' }}>
+                Forgot Password?
+              </Link>
+            </div>
           </form>
         </div>
       </div>

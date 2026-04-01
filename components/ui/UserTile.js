@@ -5,86 +5,162 @@ export default function UserTile({ user }) {
   const identifier = isStudent ? user.registerNumber : user.staffId;
   const profileLink = isStudent ? `/profile/${user.registerNumber}` : '#';
 
+  const departmentColor = user.departmentColor || '#7C5CFF';
+  const roleColor = isStudent ? '#22C55E' : '#F59E0B';
+
   return (
-    <div className="p-6">
-      <div className="flex items-start">
+    <div style={{ padding: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
         {/* Profile Picture */}
-        <div className="flex-shrink-0 mr-4">
-          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+        <div style={{ flexShrink: 0, marginRight: '1rem' }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: '#171B24',
+              border: '1px solid #222634',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
             {user.profile?.profilePic && user.profile.profilePic !== '/placeholder.png' ? (
-              <img 
-                src={user.profile.profilePic} 
+              <img
+                src={user.profile.profilePic}
                 alt={user.name}
-                className="w-full h-full object-cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <span className="text-gray-600 text-xl font-bold">
+              <span style={{ fontSize: 24, fontWeight: 700, color: '#7C5CFF' }}>
                 {user.name.charAt(0).toUpperCase()}
               </span>
             )}
           </div>
         </div>
-        
+
         {/* User Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             {isStudent ? (
-              <Link 
+              <Link
                 href={profileLink}
-                className="text-lg font-semibold text-gray-900 hover:text-emerald-600 truncate"
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#E5E7EB',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  transition: 'color 0.2s',
+                }}
+                onMouseOver={(e) => (e.target.style.color = '#7C5CFF')}
+                onMouseOut={(e) => (e.target.style.color = '#E5E7EB')}
               >
                 {user.name}
               </Link>
             ) : (
-              <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <h3
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#E5E7EB',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {user.name}
               </h3>
             )}
           </div>
-          
-          <p className="text-sm text-gray-500 mb-2">
+
+          <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>
             {identifier}
           </p>
-          
-          <div className="flex items-center flex-wrap gap-2">
-            <span 
-              className="inline-block px-2 py-1 text-xs font-medium rounded-full"
+
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span
               style={{
-                backgroundColor: `${user.departmentColor || '#6b7280'}20`,
-                color: user.departmentColor || '#6b7280'
+                display: 'inline-block',
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 500,
+                borderRadius: 20,
+                background: `${departmentColor}20`,
+                border: `1px solid ${departmentColor}40`,
+                color: departmentColor,
               }}
             >
               {user.department}
             </span>
-            
+
             {isStudent && user.batchYear && (
-              <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+              <span
+                style={{
+                  display: 'inline-block',
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  borderRadius: 20,
+                  background: '#171B24',
+                  border: '1px solid #222634',
+                  color: '#9CA3AF',
+                }}
+              >
                 Batch {user.batchYear}
               </span>
             )}
           </div>
-          
+
           {/* Additional Info */}
           {user.profile?.bio && (
-            <p className="mt-3 text-sm text-gray-600 line-clamp-2">
+            <p
+              style={{
+                marginTop: 12,
+                fontSize: 12,
+                color: '#9CA3AF',
+                lineHeight: 1.5,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               {user.profile.bio}
             </p>
           )}
-          
+
           {/* Interests */}
           {user.profile?.interests && user.profile.interests.length > 0 && (
-            <div className="mt-3">
-              <div className="flex flex-wrap gap-1">
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {user.profile.interests.slice(0, 3).map((interest, index) => (
                   <span
                     key={index}
-                    className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
+                    style={{
+                      display: 'inline-block',
+                      background: '#171B24',
+                      border: '1px solid #222634',
+                      color: '#9CA3AF',
+                      fontSize: 10,
+                      padding: '2px 8px',
+                      borderRadius: 12,
+                    }}
                   >
                     {interest}
                   </span>
                 ))}
                 {user.profile.interests.length > 3 && (
-                  <span className="inline-block text-gray-500 text-xs">
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: '#6B7280',
+                    }}
+                  >
                     +{user.profile.interests.length - 3} more
                   </span>
                 )}
@@ -93,14 +169,23 @@ export default function UserTile({ user }) {
           )}
         </div>
       </div>
-      
+
       {/* Joined Date */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-xs text-gray-500">
-          Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric'
-          }) : 'Recently'}
+      <div
+        style={{
+          marginTop: 16,
+          paddingTop: 12,
+          borderTop: '1px solid #222634',
+        }}
+      >
+        <p style={{ fontSize: 10, color: '#6B7280' }}>
+          Joined{' '}
+          {user.createdAt
+            ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric',
+              })
+            : 'Recently'}
         </p>
       </div>
     </div>

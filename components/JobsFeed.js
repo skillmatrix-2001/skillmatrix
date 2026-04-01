@@ -38,121 +38,236 @@ export default function JobsFeed() {
 
   return (
     <div>
-      <div className="mb-6 flex gap-2">
+      {/* Search bar */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem' }}>
         <input
           type="text"
           value={jobQuery}
           onChange={(e) => setJobQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') fetchJobs(); }}
           placeholder="e.g. frontend developer fresher india"
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          style={{
+            flex: 1,
+            background: '#0B0D12',
+            border: '1px solid #222634',
+            borderRadius: 8,
+            padding: '10px 14px',
+            color: '#E5E7EB',
+            fontSize: 14,
+            outline: 'none',
+            fontFamily: 'inherit',
+          }}
         />
         <button
           onClick={fetchJobs}
           disabled={loading}
-          className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            background: '#7C5CFF',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '9px 18px',
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            transition: 'background 0.2s',
+          }}
+          onMouseOver={(e) => { if (!loading) e.target.style.background = '#6d4fe0'; }}
+          onMouseOut={(e) => { if (!loading) e.target.style.background = '#7C5CFF'; }}
         >
           {loading ? 'Searching...' : 'Search'}
         </button>
       </div>
 
+      {/* Loading skeletons */}
       {loading && (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-50 rounded-xl border border-gray-200 p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-2/3 mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div
+              key={i}
+              style={{
+                background: '#171B24',
+                border: '1px solid #222634',
+                borderRadius: 12,
+                padding: 18,
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: '#0B0D12' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ width: '70%', height: 16, background: '#0B0D12', borderRadius: 4, marginBottom: 6 }} />
+                  <div style={{ width: '50%', height: 12, background: '#0B0D12', borderRadius: 4 }} />
+                </div>
+              </div>
+              <div style={{ width: '80%', height: 12, background: '#0B0D12', borderRadius: 4, marginBottom: 8 }} />
+              <div style={{ width: '60%', height: 12, background: '#0B0D12', borderRadius: 4 }} />
             </div>
           ))}
         </div>
       )}
 
+      {/* Empty states */}
       {!loading && !searched && (
-        <div className="text-center py-6">
-          <p className="text-gray-500 text-sm">Search for jobs above to see results.</p>
+        <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+          <p style={{ color: '#6B7280', fontSize: 13 }}>Search for jobs above to see results.</p>
         </div>
       )}
 
       {!loading && searched && jobs.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-gray-500 text-sm">No jobs found. Try a different search query.</p>
+        <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+          <p style={{ color: '#6B7280', fontSize: 13 }}>No jobs found. Try a different search query.</p>
         </div>
       )}
 
+      {/* Jobs list */}
       {!loading && jobs.length > 0 && (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {jobs.map((job, index) => (
             <div
               key={index}
-              className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow duration-200"
+              style={{
+                background: '#171B24',
+                border: '1px solid #222634',
+                borderRadius: 12,
+                padding: 18,
+                transition: 'border-color 0.2s',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#2d3148'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#222634'; }}
             >
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    {job.employer_logo ? (
-                      <img
-                        src={job.employer_logo}
-                        alt={job.employer_name}
-                        className="w-10 h-10 rounded-lg object-contain border border-gray-200 bg-white p-1"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-emerald-600 font-bold">
-                          {job.employer_name ? job.employer_name.charAt(0) : 'J'}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-semibold text-gray-900 text-sm">{job.job_title}</h4>
-                      <p className="text-xs text-gray-600">{job.employer_name}</p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 flex-shrink-0">
-                    Job
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-3 text-xs text-gray-500">
-                  {job.job_city && (
-                    <span>{job.job_city}{job.job_country ? ', ' + job.job_country : ''}</span>
-                  )}
-                  {job.job_employment_type && (
-                    <span className="px-2 py-0.5 bg-gray-100 rounded">{job.job_employment_type}</span>
-                  )}
-                  {job.job_posted_at_datetime_utc && (
-                    <span>{formatDate(job.job_posted_at_datetime_utc)}</span>
-                  )}
-                </div>
-
-                {job.job_description && (
-                  <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-                    {job.job_description.slice(0, 150) + '...'}
-                  </p>
-                )}
-
-                {job.job_required_skills && job.job_required_skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {job.job_required_skills.slice(0, 4).map((skill, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 rounded text-xs">
-                        {skill}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {job.employer_logo ? (
+                    <img
+                      src={job.employer_logo}
+                      alt={job.employer_name}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        objectFit: 'contain',
+                        border: '1px solid #222634',
+                        background: '#0B0D12',
+                        padding: 4,
+                      }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 8,
+                        background: 'rgba(124,92,255,0.1)',
+                        border: '1px solid rgba(124,92,255,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: 14 }}>
+                        {job.employer_name ? job.employer_name.charAt(0).toUpperCase() : 'J'}
                       </span>
-                    ))}
+                    </div>
+                  )}
+                  <div>
+                    <h4 style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>
+                      {job.job_title}
+                    </h4>
+                    <p style={{ color: '#9CA3AF', fontSize: 12 }}>{job.employer_name}</p>
                   </div>
-                )}
+                </div>
+                <span
+                  style={{
+                    background: 'rgba(124,92,255,0.1)',
+                    color: '#a78bfa',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 500,
+                  }}
+                >
+                  Job
+                </span>
+              </div>
 
-                {job.job_apply_link && (
-                  <a
-                    href={job.job_apply_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded-lg font-medium transition-colors"
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 12 }}>
+                {job.job_city && (
+                  <span style={{ color: '#6B7280', fontSize: 12 }}>
+                    {job.job_city}{job.job_country ? ', ' + job.job_country : ''}
+                  </span>
+                )}
+                {job.job_employment_type && (
+                  <span
+                    style={{
+                      background: '#0B0D12',
+                      border: '1px solid #222634',
+                      padding: '2px 8px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      color: '#9CA3AF',
+                    }}
                   >
-                    Apply Now
-                  </a>
+                    {job.job_employment_type}
+                  </span>
+                )}
+                {job.job_posted_at_datetime_utc && (
+                  <span style={{ color: '#6B7280', fontSize: 11 }}>{formatDate(job.job_posted_at_datetime_utc)}</span>
                 )}
               </div>
+
+              {job.job_description && (
+                <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+                  {job.job_description.slice(0, 150) + '...'}
+                </p>
+              )}
+
+              {job.job_required_skills && job.job_required_skills.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 12 }}>
+                  {job.job_required_skills.slice(0, 4).map((skill, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        background: '#0B0D12',
+                        border: '1px solid #222634',
+                        padding: '2px 8px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        color: '#9CA3AF',
+                      }}
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {job.job_apply_link && (
+                <a
+                  href={job.job_apply_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    background: '#7C5CFF',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '6px 16px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseOver={(e) => { e.target.style.background = '#6d4fe0'; }}
+                  onMouseOut={(e) => { e.target.style.background = '#7C5CFF'; }}
+                >
+                  Apply Now
+                </a>
+              )}
             </div>
           ))}
         </div>

@@ -1,3 +1,4 @@
+// app/api/posts/upload/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Post from '@/lib/models/Post';
@@ -29,17 +30,19 @@ export async function POST(request) {
     const techStack = formData.get('techStack') || '';
     const issuedBy = formData.get('issuedBy') || '';
     const semester = formData.get('semester');
-    const file = formData.get('file');
+    // Get all files (multiple)
+    const files = formData.getAll('files');
 
     console.log('📝 Upload data received:', {
       title, type, userId, semester,
       descriptionLength: description?.length,
-      hasFile: !!file, fileName: file?.name, fileSize: file?.size
+      fileCount: files.length,
+      fileNames: files.map(f => f?.name),
     });
 
-    if (!title || !description || !type || !userId || !file) {
+    if (!title || !description || !type || !userId || files.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields.' },
+        { success: false, error: 'Missing required fields or no files uploaded.' },
         { status: 400 }
       );
     }
@@ -53,47 +56,50 @@ export async function POST(request) {
     }
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only JPEG, PNG, GIF, WebP allowed.' },
-        { status: 400 }
-      );
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    const media = [];
+
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        return NextResponse.json(
+          { success: false, error: `Invalid file type: ${file.name}. Only JPEG, PNG, GIF, WebP allowed.` },
+          { status: 400 }
+        );
+      }
+      if (file.size > maxSize) {
+        return NextResponse.json(
+          { success: false, error: `File ${file.name} too large. Maximum size is 5MB.` },
+          { status: 400 }
+        );
+      }
+
+      // Upload to Cloudinary
+      console.log(`☁️ Uploading ${file.name} to Cloudinary...`);
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { folder: 'skillmatrix', resource_type: 'image' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(buffer);
+      });
+
+      media.push({
+        url: uploadResult.secure_url,
+        type: 'image',
+        filename: file.name,
+        size: file.size,
+        mimeType: file.type,
+        cloudinaryId: uploadResult.public_id,
+      });
     }
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { success: false, error: 'File too large. Maximum size is 5MB.' },
-        { status: 400 }
-      );
-    }
-
-    // Upload to Cloudinary
-    console.log('☁️ Uploading to Cloudinary...');
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        { folder: 'skillmatrix', resource_type: 'image' },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      ).end(buffer);
-    });
-
-    const fileUrl = uploadResult.secure_url;
-    console.log('✅ Cloudinary upload successful:', fileUrl);
-
-    const media = [{
-      url: fileUrl,
-      type: 'image',
-      filename: file.name,
-      size: file.size,
-      mimeType: file.type,
-      cloudinaryId: uploadResult.public_id
-    }];
+    console.log('✅ Cloudinary uploads successful');
 
     const postData = {
       owner: userId,
@@ -103,7 +109,7 @@ export async function POST(request) {
       media,
       date: new Date(),
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     if (semester && !isNaN(parseInt(semester))) {
@@ -133,29 +139,31 @@ export async function POST(request) {
 
     console.log('✅ Post created with ID:', post._id);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Upload successful',
-      post: {
-        _id: post._id,
-        title: post.title,
-        description: post.description,
-        type: post.type,
-        semester: post.semester,
-        media: post.media,
-        issuedBy: post.issuedBy,
-        tags: post.tags || [],
-        techStack: post.techStack || [],
-        createdAt: post.createdAt,
-        owner: {
-          _id: user._id,
-          name: user.name,
-          registerNumber: user.registerNumber,
-          profile: user.profile
-        }
-      }
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Upload successful',
+        post: {
+          _id: post._id,
+          title: post.title,
+          description: post.description,
+          type: post.type,
+          semester: post.semester,
+          media: post.media,
+          issuedBy: post.issuedBy,
+          tags: post.tags || [],
+          techStack: post.techStack || [],
+          createdAt: post.createdAt,
+          owner: {
+            _id: user._id,
+            name: user.name,
+            registerNumber: user.registerNumber,
+            profile: user.profile,
+          },
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('❌ Upload error:', error);
     return NextResponse.json(
@@ -163,7 +171,7 @@ export async function POST(request) {
         success: false,
         error: 'Upload failed',
         details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );

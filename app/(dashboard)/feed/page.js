@@ -4,12 +4,348 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import JobsFeed from '@/components/JobsFeed';
 
+// ===================== ImageCarousel =====================
+function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIndexChange }) {
+  const [internalIndex, setInternalIndex] = useState(0);
+  const index = externalIndex !== undefined ? externalIndex : internalIndex;
+
+  const setIndex = (newIndex) => {
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    } else {
+      setInternalIndex(newIndex);
+    }
+  };
+
+  const next = () => {
+    const newIndex = (index + 1) % images.length;
+    setIndex(newIndex);
+  };
+  const prev = () => {
+    const newIndex = (index - 1 + images.length) % images.length;
+    setIndex(newIndex);
+  };
+
+  if (!images.length) return null;
+
+  return (
+    <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#0B0D12' }}>
+      <div
+        style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16/9' }}
+        onClick={() => onImageClick?.(index)}
+      >
+        <img
+          src={images[index]?.url}
+          alt={`Slide ${index + 1}`}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'transform 0.3s',
+          }}
+          onMouseOver={(e) => (e.target.style.transform = 'scale(1.03)')}
+          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
+        />
+      </div>
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            style={{
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(0,0,0,0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 20,
+              transition: 'background 0.2s',
+            }}
+            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
+            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
+          >
+            ‹
+          </button>
+          <button
+            onClick={next}
+            style={{
+              position: 'absolute',
+              right: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(0,0,0,0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 20,
+              transition: 'background 0.2s',
+            }}
+            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
+            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
+          >
+            ›
+          </button>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: 6,
+            }}
+          >
+            {images.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setIndex(idx)}
+                style={{
+                  width: idx === index ? 20 : 6,
+                  height: 6,
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: idx === index ? '#7C5CFF' : 'rgba(255,255,255,0.5)',
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ===================== ImageModal =====================
+function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
+  const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
+
+  useEffect(() => {
+    setCurrentIndex(initialImageIndex);
+  }, [item, initialImageIndex]);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !item) return null;
+
+  const images = type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || [];
+  const currentImage = images[currentIndex]?.url;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        background: 'rgba(0,0,0,0.88)',
+        backdropFilter: 'blur(12px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: '#12151C',
+          border: '1px solid #222634',
+          borderRadius: 16,
+          overflow: 'hidden',
+          maxWidth: 860,
+          width: '100%',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 18px',
+            borderBottom: '1px solid #222634',
+            flexShrink: 0,
+          }}
+        >
+          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item.title}</h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#171B24',
+              border: '1px solid #222634',
+              borderRadius: 8,
+              padding: '6px 8px',
+              cursor: 'pointer',
+              color: '#9CA3AF',
+              display: 'flex',
+              lineHeight: 0,
+            }}
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              background: '#0B0D12',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem',
+              minHeight: 260,
+            }}
+          >
+            <img
+              src={currentImage}
+              alt={item.title}
+              style={{ maxHeight: '50vh', maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
+            />
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentIndex((p) => (p - 1 + images.length) % images.length)}
+                  style={{
+                    position: 'absolute',
+                    left: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid #222634',
+                    borderRadius: 8,
+                    padding: '8px',
+                    cursor: 'pointer',
+                    color: '#E5E7EB',
+                    lineHeight: 0,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCurrentIndex((p) => (p + 1) % images.length)}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid #222634',
+                    borderRadius: 8,
+                    padding: '8px',
+                    cursor: 'pointer',
+                    color: '#E5E7EB',
+                    lineHeight: 0,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 14,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: 6,
+                  }}
+                >
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      style={{
+                        width: idx === currentIndex ? 18 : 6,
+                        height: 6,
+                        borderRadius: 999,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        background: idx === currentIndex ? '#7C5CFF' : 'rgba(255,255,255,0.2)',
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
+            {type === 'certificate' && item.issuedBy && (
+              <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
+                Issued by {item.issuedBy}
+              </p>
+            )}
+            {item.semester && (
+              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
+                Semester {item.semester}
+              </p>
+            )}
+            <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
+              {item.description}
+            </p>
+            {type === 'project' && item.techStack?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {item.techStack.map((tech, i) => (
+                  <span key={i} className="tech-chip">{tech}</span>
+                ))}
+              </div>
+            )}
+            {type === 'certificate' && item.tags?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {item.tags.map((tag, i) => (
+                  <span key={i} className="tag-chip">#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== Feed Content =====================
 function FeedContent() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [showJobs, setShowJobs] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [carouselIndices, setCarouselIndices] = useState({});
   const router = useRouter();
   const searchParams = useSearchParams();
   const jobsSectionRef = useRef(null);
@@ -36,7 +372,6 @@ function FeedContent() {
     }
   }, [searchParams]);
 
-  // Listen for navbar Jobs button click when already on feed page
   useEffect(() => {
     const handler = () => {
       setShowJobs(true);
@@ -48,7 +383,6 @@ function FeedContent() {
     return () => window.removeEventListener('openJobs', handler);
   }, []);
 
-  // Scroll to jobs section when showJobs becomes true
   useEffect(() => {
     if (showJobs && jobsSectionRef.current) {
       setTimeout(() => {
@@ -102,262 +436,288 @@ function FeedContent() {
     router.push(`/profile/${registerNumber}`);
   };
 
+  const handleImageClick = (post, imageIndex = 0) => {
+    setSelectedPost(post);
+    setSelectedImageIndex(imageIndex);
+    setModalOpen(true);
+  };
+
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading user session...</p>
+      <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #222634', borderTopColor: '#7C5CFF', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+          <p style={{ marginTop: 16, color: '#6B7280', fontSize: 14 }}>Loading user session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div style={{ minHeight: '100vh', background: '#0B0D12' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .cert-card {
+          background: #171B24; border: 1px solid #222634; border-radius: 12px; padding: 18px;
+          transition: border-color 0.2s;
+        }
+        .cert-card:hover { border-color: #2d3148; }
+        .tag-chip {
+          display: inline-block; background: #171B24; border: 1px solid #222634;
+          color: #9CA3AF; padding: 3px 10px; border-radius: 999px; font-size: 12px;
+        }
+        .tech-chip {
+          display: inline-block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15);
+          color: #4ade80; padding: 4px 10px; border-radius: 6px; font-size: 12px;
+        }
+        .action-btn-primary {
+          background: #7C5CFF; color: #fff; border: none; border-radius: 8px;
+          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: background 0.2s; font-family: inherit;
+        }
+        .action-btn-primary:hover { background: #6d4fe0; }
+        .action-btn-ghost {
+          background: transparent; color: #9CA3AF; border: 1px solid #222634; border-radius: 8px;
+          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: all 0.2s; font-family: inherit;
+        }
+        .action-btn-ghost:hover { border-color: #9CA3AF; color: #E5E7EB; }
+        .section-label {
+          color: #6B7280; font-size: 11px; text-transform: uppercase;
+          letter-spacing: 0.08em; margin-bottom: 10px; display: block;
+        }
+      `}</style>
 
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Activity Feed</h1>
-              <p className="text-gray-600">Latest certificates and projects from students</p>
-            </div>
-            {!showJobs && (
-              <button
-                onClick={() => setShowJobs(true)}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg font-medium transition-colors"
-              >
-                💼 Job Updates
-              </button>
-            )}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1rem' }}>
+        {/* Header - responsive */}
+        <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div>
+            <h1 style={{ color: '#E5E7EB', fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Activity Feed</h1>
+            <p style={{ color: '#6B7280', fontSize: 14 }}>Latest certificates and projects from students</p>
           </div>
+          {!showJobs && (
+            <button
+              onClick={() => setShowJobs(true)}
+              className="action-btn-primary"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              Job Updates
+            </button>
+          )}
         </div>
 
         {/* Jobs Section */}
         {showJobs && (
           <div
             ref={jobsSectionRef}
-            className="bg-white rounded-xl border border-gray-200 mb-6 scroll-mt-4"
+            style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 12, marginBottom: 24, scrollMarginTop: '4rem' }}
           >
-            <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">💼 Job Updates</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #222634', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h2 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, margin: 0 }}>Job Updates</h2>
               <button
                 onClick={() => setShowJobs(false)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-medium"
+                style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 14, padding: '4px 8px' }}
               >
                 ✕ Close
               </button>
             </div>
-            <div className="p-6">
+            <div style={{ padding: 20 }}>
               <JobsFeed />
             </div>
           </div>
         )}
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, color: '#F87171', fontSize: 14 }}>
             {error}
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Posts */}
         {loading ? (
-          <div className="space-y-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-                <div className="flex items-center mb-4">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
-                  <div>
-                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-24"></div>
+              <div key={i} style={{ background: '#171B24', border: '1px solid #222634', borderRadius: 12, padding: 18, animation: 'pulse 1.5s ease-in-out infinite' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#0B0D12' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ width: '60%', height: 16, background: '#0B0D12', borderRadius: 4, marginBottom: 6 }} />
+                    <div style={{ width: '40%', height: 12, background: '#0B0D12', borderRadius: 4 }} />
                   </div>
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-48 bg-gray-200 rounded-lg"></div>
+                <div style={{ height: 16, width: '80%', background: '#0B0D12', borderRadius: 4, marginBottom: 8 }} />
+                <div style={{ height: 120, background: '#0B0D12', borderRadius: 8 }} />
               </div>
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div style={{ textAlign: 'center', padding: '3rem', background: '#171B24', border: '1px solid #222634', borderRadius: 12 }}>
+            <svg width="48" height="48" fill="none" stroke="#6B7280" viewBox="0 0 24 24" style={{ margin: '0 auto 1rem' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">No posts yet</h3>
-            <p className="text-gray-600 mb-6">No student activities found. Students will appear here when they upload content.</p>
+            <h3 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No posts yet</h3>
+            <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 0 }}>Students will appear here when they upload content.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {posts.map((post) => (
-              <div
-                key={post._id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow duration-200"
-              >
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex items-start justify-between">
-                    <div
-                      className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => handleUserClick(post.owner?.registerNumber)}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center overflow-hidden shadow-sm">
-                        {post.owner?.profile?.profilePic && post.owner.profile.profilePic !== '/placeholder.png' ? (
-                          <img
-                            src={post.owner.profile.profilePic}
-                            alt={post.owner.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentElement.innerHTML = `<span class="text-gray-600 font-bold text-lg">${post.owner?.name?.charAt(0).toUpperCase() || 'U'}</span>`;
-                            }}
-                          />
-                        ) : (
-                          <span className="text-gray-600 font-bold text-lg">
-                            {post.owner?.name?.charAt(0).toUpperCase() || 'U'}
-                          </span>
+              <div key={post._id} className="cert-card">
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+                    onClick={() => handleUserClick(post.owner?.registerNumber)}
+                  >
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#0B0D12', border: '1px solid #222634', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {post.owner?.profile?.profilePic && post.owner.profile.profilePic !== '/placeholder.png' ? (
+                        <img src={post.owner.profile.profilePic} alt={post.owner.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: 20, fontWeight: 700, color: '#7C5CFF' }}>
+                          {post.owner?.name?.charAt(0).toUpperCase() || 'U'}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>
+                        {post.owner?.name || 'Unknown User'}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ color: '#6B7280', fontSize: 12 }}>{post.owner?.registerNumber}</span>
+                        {post.owner?.batchYear && (
+                          <>
+                            <span style={{ color: '#6B7280', fontSize: 12 }}>•</span>
+                            <span style={{ color: '#6B7280', fontSize: 12 }}>Batch {post.owner.batchYear}</span>
+                          </>
                         )}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 hover:text-black">
-                          {post.owner?.name || 'Unknown User'}
-                        </h3>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <span className="text-sm text-gray-500">{post.owner?.registerNumber}</span>
-                          <span className="text-xs text-gray-400">•</span>
-                          {post.owner?.batchYear && (
-                            <>
-                              <span className="text-sm text-gray-500">Batch {post.owner.batchYear}</span>
-                              <span className="text-xs text-gray-400">•</span>
-                            </>
-                          )}
-                          {post.owner?.department && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-700">
+                        {post.owner?.department && (
+                          <>
+                            <span style={{ color: '#6B7280', fontSize: 12 }}>•</span>
+                            <span style={{ color: '#9CA3AF', fontSize: 11, background: '#0B0D12', padding: '2px 8px', borderRadius: 12 }}>
                               {post.owner.department}
                             </span>
-                          )}
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex flex-col items-end">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium mb-2 ${
-                        post.type === 'certificate'
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'bg-emerald-50 text-emerald-600'
-                      }`}>
-                        {post.type === 'certificate' ? '📜 Certificate' : '🚀 Project'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {formatDate(post.createdAt || post.date)}
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span
+                      style={{
+                        background: post.type === 'certificate' ? 'rgba(124,92,255,0.1)' : 'rgba(34,197,94,0.1)',
+                        color: post.type === 'certificate' ? '#a78bfa' : '#4ade80',
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {post.type === 'certificate' ? 'Certificate' : 'Project'}
+                    </span>
+                    <span style={{ color: '#6B7280', fontSize: 11 }}>
+                      {formatDate(post.createdAt || post.date)}
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-6">
-                  {post.title && (
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">{post.title}</h4>
-                  )}
-                  <div className="mb-4">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">{post.description}</p>
-                  </div>
+                {/* Content */}
+                {post.title && (
+                  <h4 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{post.title}</h4>
+                )}
+                <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>
+                  {post.description}
+                </p>
 
-                  {post.type === 'project' && post.techStack && post.techStack.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600 mb-2">Technologies used:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {post.techStack.map((tech, index) => (
-                          <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">{tech}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {post.type === 'certificate' && post.issuedBy && (
-                    <div className="mb-4 text-sm text-gray-600">
-                      <span className="font-medium">Issued by:</span> {post.issuedBy}
-                    </div>
-                  )}
-
-                  {post.media && post.media.length > 0 && (
-                    <div className="mb-4 rounded-lg overflow-hidden bg-gray-50">
-                      {post.media[0]?.type === 'video' ? (
-                        <div className="relative aspect-video">
-                          <video src={post.media[0].url} controls className="w-full h-full object-contain bg-black" />
-                        </div>
-                      ) : (
+                {/* Media */}
+                {post.media && post.media.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    {post.media.length === 1 ? (
+                      <div
+                        style={{ cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }}
+                        onClick={() => handleImageClick(post, 0)}
+                      >
                         <img
                           src={post.media[0].url}
                           alt={post.title || 'Post media'}
-                          className="w-full max-h-[400px] object-contain"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const parent = e.target.parentElement;
-                            parent.innerHTML = `<div class="w-full h-48 flex items-center justify-center bg-gray-100"><div class="text-center"><svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><p class="text-sm text-gray-500">Media not available</p></div></div>`;
-                          }}
+                          style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8, transition: 'transform 0.3s' }}
+                          onMouseOver={(e) => (e.target.style.transform = 'scale(1.02)')}
+                          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
                         />
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <ImageCarousel
+                        images={post.media}
+                        onImageClick={(idx) => handleImageClick(post, idx)}
+                        currentIndex={carouselIndices[post._id] || 0}
+                        onIndexChange={(idx) => setCarouselIndices(prev => ({ ...prev, [post._id]: idx }))}
+                      />
+                    )}
+                  </div>
+                )}
 
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {post.tags.map((tag, index) => (
-                        <span key={index} className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {post.type === 'project' && (post.githubLink || post.demoLink) && (
-                    <div className="mt-4 flex gap-4">
-                      {post.githubLink && (
-                        <a
-                          href={post.githubLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-gray-600 hover:text-black flex items-center"
-                        >
-                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                          </svg>
-                          GitHub
-                        </a>
-                      )}
-                      {post.demoLink && (
-                        <a
-                          href={post.demoLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-gray-600 hover:text-black flex items-center"
-                        >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                          </svg>
-                          Live Demo
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Tech stack / tags */}
+                {post.type === 'project' && post.techStack && post.techStack.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                    {post.techStack.map((tech, i) => (
+                      <span key={i} className="tech-chip">{tech}</span>
+                    ))}
+                  </div>
+                )}
+                {post.tags && post.tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                    {post.tags.map((tag, i) => (
+                      <span key={i} className="tag-chip" style={{ fontSize: 11 }}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {post.type === 'certificate' && post.issuedBy && (
+                  <p style={{ color: '#7C5CFF', fontSize: 12, marginBottom: 0 }}>
+                    Issued by {post.issuedBy}
+                  </p>
+                )}
+                {post.type === 'project' && (post.githubLink || post.demoLink) && (
+                  <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
+                    {post.githubLink && (
+                      <a href={post.githubLink} target="_blank" rel="noopener noreferrer" style={{ color: '#9CA3AF', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                      </a>
+                    )}
+                    {post.demoLink && (
+                      <a href={post.demoLink} target="_blank" rel="noopener noreferrer" style={{ color: '#9CA3AF', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Live Demo
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        <div className="mt-8 text-center">
+        {/* Refresh button */}
+        <div style={{ textAlign: 'center', marginTop: 32 }}>
           <button
             onClick={fetchPosts}
             disabled={loading}
-            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="action-btn-ghost"
+            style={{ padding: '8px 20px' }}
           >
             {loading ? 'Refreshing...' : 'Refresh Feed'}
           </button>
         </div>
       </div>
+
+      {/* Modal */}
+      <ImageModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        item={selectedPost}
+        type={selectedPost?.type}
+        initialImageIndex={selectedImageIndex}
+      />
     </div>
   );
 }
@@ -365,8 +725,8 @@ function FeedContent() {
 export default function FeedPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+      <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #222634', borderTopColor: '#7C5CFF', animation: 'spin 0.8s linear infinite' }} />
       </div>
     }>
       <FeedContent />

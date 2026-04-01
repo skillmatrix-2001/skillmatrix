@@ -5,8 +5,11 @@ import Navbar from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "SkillMatrix - College Social Platform",
+  title: "SkillMatrix",
   description: "A college-only social platform for achievements and portfolios",
+  icons: {
+    icon: [{ url: "/skill-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }) {

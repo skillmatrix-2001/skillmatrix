@@ -17,13 +17,14 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [dobError, setDobError] = useState('');
 
-  // Generate batch years (current year to 10 years back)
   const generateBatchYears = () => {
     const years = [];
     const currentYear = new Date().getFullYear();
@@ -35,16 +36,13 @@ export default function RegisterPage() {
 
   useEffect(() => {
     fetchDepartments();
-    
-    // Update batch year when year changes (optional: add listener for year change)
     const interval = setInterval(() => {
       const newYear = new Date().getFullYear();
       if (newYear !== currentYear) {
         setCurrentYear(newYear);
         setFormData(prev => ({ ...prev, batchYear: newYear }));
       }
-    }, 60000); // Check every minute
-    
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -63,69 +61,46 @@ export default function RegisterPage() {
     }
   };
 
-  // Function to calculate age from date of birth
   const calculateAge = (dob) => {
     const birthDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
     return age;
   };
 
-  // Validate date of birth
   const validateDOB = (dob) => {
     if (!dob) return false;
-    
     const birthDate = new Date(dob);
     const today = new Date();
-    
-    // Check if date is valid
     if (isNaN(birthDate.getTime())) {
       setDobError('Please enter a valid date');
       return false;
     }
-    
-    // Check if date is not in the future
     if (birthDate > today) {
       setDobError('Date of birth cannot be in the future');
       return false;
     }
-    
     const age = calculateAge(dob);
-    
-    // Check if age is at least 17 years
     if (age < 17) {
       setDobError(`⚠️ You must be at least 17 years old to register. Your age: ${age} years`);
       return false;
     }
-    
-    // Optional: Add maximum age limit (60 years)
     if (age > 60) {
       setDobError(`⚠️ Age must be between 17 and 60 years. Your age: ${age} years`);
       return false;
     }
-    
     setDobError('');
     return true;
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-    
-    // Validate DOB when it changes
-    if (name === 'dob') {
-      validateDOB(value);
-    }
-    
-    // Clear general error when user types
+    setFormData({ ...formData, [name]: value });
+    if (name === 'dob') validateDOB(value);
     if (error) setError('');
   };
 
@@ -134,36 +109,27 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    // Validate register number (12 digits)
     if (!/^\d{12}$/.test(formData.registerNumber)) {
       setError('Register number must be exactly 12 digits');
       setLoading(false);
       return;
     }
-
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
-
-    // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
-
-    // Validate password length
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
       setLoading(false);
       return;
     }
-
-    // Validate DOB (must be at least 17 years)
     if (!validateDOB(formData.dob)) {
       setError(dobError || 'Invalid date of birth. You must be at least 17 years old.');
       setLoading(false);
@@ -176,14 +142,10 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
+        setTimeout(() => router.push('/login'), 2000);
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -196,20 +158,17 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-emerald-500 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+        <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
+          <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
+            <div style={{ color: '#7C5CFF', marginBottom: '1.5rem' }}>
+              <svg style={{ width: 64, height: 64, margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Registration Successful!</h3>
-            <p className="text-gray-600 mb-6">You will be redirected to login page shortly.</p>
-            <Link
-              href="/login"
-              className="inline-block bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-            >
+            <h3 style={{ color: '#E5E7EB', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Registration Successful!</h3>
+            <p style={{ color: '#9CA3AF', marginBottom: 24 }}>You will be redirected to login page shortly.</p>
+            <Link href="/login" style={{ display: 'inline-block', background: '#7C5CFF', color: '#fff', padding: '10px 20px', borderRadius: 8, textDecoration: 'none', fontWeight: 500 }}>
               Go to Login
             </Link>
           </div>
@@ -218,173 +177,142 @@ export default function RegisterPage() {
     );
   }
 
+  const inputStyle = {
+    width: '100%', background: '#0B0D12', border: '1px solid #222634',
+    borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
+    outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
+    fontFamily: 'inherit'
+  };
+
+  const passwordContainerStyle = {
+    position: 'relative',
+    width: '100%'
+  };
+
+  const eyeButtonStyle = {
+    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+    background: 'none', border: 'none', cursor: 'pointer',
+    padding: 0, display: 'flex', alignItems: 'center',
+    color: '#6B7280'
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            Student Registration
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+    <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: 480, width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ color: '#E5E7EB', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Student Registration</h2>
+          <p style={{ color: '#6B7280', fontSize: 14 }}>
             Or{' '}
-            <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-500">
+            <Link href="/login" style={{ color: '#7C5CFF', textDecoration: 'none' }}>
               sign in to your account
             </Link>
           </p>
         </div>
-        
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
-          <form className="space-y-4" onSubmit={handleSubmit}>
+
+        <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', color: '#F87171', fontSize: 14 }}>
                 {error}
               </div>
             )}
-            
+
             <div>
-              <label htmlFor="registerNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                Register Number * (12 digits)
-              </label>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Register Number * (12 digits)</label>
               <input
-                id="registerNumber"
                 name="registerNumber"
                 type="text"
                 required
                 value={formData.registerNumber}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="951321001234"
-                pattern="\d{12}"
-                maxLength="12"
-                title="Must be exactly 12 digits"
+                maxLength={12}
+                style={inputStyle}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Exactly 12 digits (e.g., 951321001234)
-              </p>
+              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Exactly 12 digits (e.g., 951321001234)</p>
             </div>
-            
+
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name *
-              </label>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Full Name *</label>
               <input
-                id="name"
                 name="name"
                 type="text"
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Your Name"
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address *
-              </label>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Email Address *</label>
               <input
-                id="email"
                 name="email"
                 type="email"
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="your@email.com"
+                style={inputStyle}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                We'll send important notifications to this email
-              </p>
+              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>We'll send important notifications to this email</p>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-1">
-                  Date of Birth *
-                </label>
+                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Date of Birth *</label>
                 <input
-                  id="dob"
                   name="dob"
                   type="date"
                   required
                   value={formData.dob}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
-                    dobError ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  style={{ ...inputStyle, borderColor: dobError ? '#EF4444' : '#222634' }}
                 />
-                {dobError && (
-                  <p className="text-xs text-red-600 mt-1">{dobError}</p>
-                )}
+                {dobError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{dobError}</p>}
                 {!dobError && formData.dob && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✓ Age: {calculateAge(formData.dob)} years
-                  </p>
+                  <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Age: {calculateAge(formData.dob)} years</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  You must be at least 17 years old to register
-                </p>
               </div>
-              
               <div>
-                <label htmlFor="batchYear" className="block text-sm font-medium text-gray-700 mb-1">
-                  Batch Year *
-                </label>
+                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Batch Year *</label>
                 <select
-                  id="batchYear"
                   name="batchYear"
-                  required
                   value={formData.batchYear}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  required
                 >
                   {generateBatchYears().map(year => (
-                    <option key={year} value={year}>
-                      {year} {year === new Date().getFullYear() ? '(Current Year)' : ''}
-                    </option>
+                    <option key={year} value={year}>{year} {year === new Date().getFullYear() ? '(Current Year)' : ''}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Your joining batch year (automatically updates each year)
-                </p>
+                <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Your joining batch year (automatically updates each year)</p>
               </div>
             </div>
-            
+
             <div>
-              <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
-                Department *
-              </label>
+              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Department *</label>
               {departments.length === 0 ? (
-                <div className="space-y-3">
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      ⚠️ No departments available yet. Please contact administrator.
-                    </p>
+                <>
+                  <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 8, color: '#F59E0B', fontSize: 13 }}>
+                    ⚠️ No departments available yet. Please contact administrator.
                   </div>
-                  <select
-                    id="department"
-                    name="department"
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500"
-                  >
-                    <option value="">No departments available</option>
+                  <select disabled style={{ ...inputStyle, background: '#171B24', color: '#6B7280', cursor: 'not-allowed' }}>
+                    <option>No departments available</option>
                   </select>
-                  <p className="text-xs text-gray-500">
-                    Admin must create departments first. 
-                    <a href="/login" className="text-emerald-600 hover:text-emerald-700 ml-1">
-                      Login as admin
-                    </a>
+                  <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+                    Admin must create departments first. <Link href="/login" style={{ color: '#7C5CFF' }}>Login as admin</Link>
                   </p>
-                </div>
+                </>
               ) : (
                 <select
-                  id="department"
                   name="department"
-                  required
                   value={formData.department}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  required
                 >
                   {departments.map(dept => (
                     <option key={dept._id} value={dept.name}>{dept.name}</option>
@@ -392,50 +320,76 @@ export default function RegisterPage() {
                 </select>
               )}
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password *
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="••••••••"
-                />
+                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Password *</label>
+                <div style={passwordContainerStyle}>
+                  <input
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    style={{ ...inputStyle, paddingRight: '40px' }}
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={eyeButtonStyle}>
+                    {showPassword ? (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
-              
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password *
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="••••••••"
-                />
+                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Confirm Password *</label>
+                <div style={passwordContainerStyle}>
+                  <input
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    style={{ ...inputStyle, paddingRight: '40px' }}
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeButtonStyle}>
+                    {showConfirmPassword ? (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-            
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={loading || departments.length === 0}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Registering...' : 'Register as Student'}
-              </button>
-            </div>
+
+            <button
+              type="submit"
+              disabled={loading || departments.length === 0}
+              style={{
+                width: '100%', background: '#7C5CFF', color: '#fff', border: 'none',
+                borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 500,
+                cursor: 'pointer', transition: 'background 0.2s', fontFamily: 'inherit',
+                marginTop: '0.5rem'
+              }}
+              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOut={(e) => (e.target.style.background = '#7C5CFF')}
+            >
+              {loading ? 'Registering...' : 'Register as Student'}
+            </button>
           </form>
         </div>
       </div>

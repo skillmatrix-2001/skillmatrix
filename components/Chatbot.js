@@ -116,9 +116,25 @@ export default function Chatbot({ userContext }) {
   return (
     <>
       <style>{keyframes}</style>
+      <style>{`
+        @media (max-width: 600px) {
+          .chatbot-window {
+            bottom: 80px !important;
+            right: 16px !important;
+            left: 16px !important;
+            width: auto !important;
+            max-width: none !important;
+          }
+          .chatbot-fab {
+            bottom: 20px !important;
+            right: 20px !important;
+          }
+        }
+      `}</style>
 
       {/* Floating Trigger Button */}
       <button
+        className="chatbot-fab"
         onClick={() => setOpen((v) => !v)}
         style={styles.fab}
         aria-label="Open chatbot"
@@ -140,13 +156,13 @@ export default function Chatbot({ userContext }) {
 
       {/* Chat Window */}
       {open && (
-        <div style={styles.window}>
+        <div className="chatbot-window" style={styles.window}>
           {/* Header */}
           <div style={styles.header}>
             <div style={styles.headerLeft}>
               <div style={styles.headerAvatar}>{BOT_AVATAR}</div>
               <div>
-                <div style={styles.headerTitle}> Assistant</div>
+                <div style={styles.headerTitle}>Assistant</div>
                 <div style={styles.headerStatus}>
                   <span style={styles.onlineDot} /> Online
                 </div>
@@ -190,14 +206,14 @@ export default function Chatbot({ userContext }) {
 
           {/* Input */}
           <div style={styles.inputRow}>
-            <textarea
+            <input
               ref={inputRef}
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
               placeholder="Ask about placements, resumes, interviews…"
-              rows={1}
-              style={styles.textarea}
+              style={styles.input}
             />
             <button
               onClick={sendMessage}
@@ -231,8 +247,8 @@ const keyframes = `
   40%           { transform: scale(1);   opacity: 1;   }
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
-  50%       { box-shadow: 0 0 0 10px rgba(99,102,241,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124,92,255,0.5); }
+  50%       { box-shadow: 0 0 0 10px rgba(124,92,255,0); }
 }
 `;
 
@@ -244,13 +260,13 @@ const styles = {
     width: 56,
     height: 56,
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "#7C5CFF",
     border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 8px 25px rgba(99,102,241,0.45)",
+    boxShadow: "0 8px 25px rgba(124,92,255,0.45)",
     zIndex: 9999,
     animation: "pulse 2.5s infinite",
     transition: "transform 0.2s",
@@ -259,7 +275,7 @@ const styles = {
     position: "absolute",
     top: 4,
     right: 4,
-    background: "#ef4444",
+    background: "#EF4444",
     color: "white",
     borderRadius: "50%",
     width: 18,
@@ -275,23 +291,25 @@ const styles = {
     bottom: 96,
     right: 28,
     width: 370,
+    maxWidth: "calc(100% - 32px)",
     maxHeight: 560,
     borderRadius: 20,
-    background: "#ffffff",
-    boxShadow: "0 24px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(99,102,241,0.12)",
+    background: "#12151C",
+    boxShadow: "0 0 0 2px rgba(124,92,255,0.2), 0 24px 60px rgba(0,0,0,0.4)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
     zIndex: 9998,
     animation: "fadeSlideUp 0.25s ease",
-    border: "1px solid rgba(99,102,241,0.12)",
+    border: "1px solid #222634",
   },
   header: {
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "#0B0D12",
     padding: "14px 16px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    borderBottom: "1px solid #222634",
   },
   headerLeft: {
     display: "flex",
@@ -302,42 +320,41 @@ const styles = {
     width: 38,
     height: 38,
     borderRadius: "50%",
-    background: "rgba(255,255,255,0.2)",
+    background: "rgba(124,92,255,0.2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: 20,
   },
   headerTitle: {
-    color: "white",
+    color: "#E5E7EB",
     fontWeight: 700,
     fontSize: 14,
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
   },
   headerStatus: {
-    color: "rgba(255,255,255,0.8)",
+    color: "#6B7280",
     fontSize: 11,
     display: "flex",
     alignItems: "center",
     gap: 5,
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
   },
   onlineDot: {
     display: "inline-block",
     width: 7,
     height: 7,
     borderRadius: "50%",
-    background: "#4ade80",
+    background: "#22C55E",
   },
   clearBtn: {
-    background: "rgba(255,255,255,0.15)",
+    background: "rgba(255,255,255,0.05)",
     border: "none",
     borderRadius: 8,
     padding: "6px 8px",
     cursor: "pointer",
-    color: "white",
+    color: "#9CA3AF",
     display: "flex",
     alignItems: "center",
+    transition: "background 0.2s",
   },
   messages: {
     flex: 1,
@@ -346,7 +363,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
-    background: "#f8f9ff",
+    background: "#0B0D12",
   },
   msgRow: {
     display: "flex",
@@ -357,7 +374,7 @@ const styles = {
     width: 28,
     height: 28,
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #ede9fe, #c4b5fd)",
+    background: "rgba(124,92,255,0.15)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -370,19 +387,18 @@ const styles = {
     borderRadius: 16,
     fontSize: 13.5,
     lineHeight: 1.55,
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
     wordBreak: "break-word",
   },
   userBubble: {
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-    color: "white",
+    background: "#7C5CFF",
+    color: "#FFFFFF",
     borderBottomRightRadius: 4,
   },
   botBubble: {
-    background: "white",
-    color: "#1e1b4b",
+    background: "#171B24",
+    color: "#E5E7EB",
     borderBottomLeftRadius: 4,
-    boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+    border: "1px solid #222634",
   },
   typingWrapper: {
     display: "flex",
@@ -390,21 +406,21 @@ const styles = {
     gap: 8,
   },
   typingBubble: {
-    background: "white",
+    background: "#171B24",
     padding: "12px 16px",
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     display: "flex",
     gap: 5,
     alignItems: "center",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+    border: "1px solid #222634",
   },
   dot: {
     display: "inline-block",
     width: 7,
     height: 7,
     borderRadius: "50%",
-    background: "#8b5cf6",
+    background: "#7C5CFF",
     animation: "blink 1.2s infinite",
   },
   quickPrompts: {
@@ -412,18 +428,17 @@ const styles = {
     display: "flex",
     flexWrap: "wrap",
     gap: 6,
-    background: "#f8f9ff",
-    borderTop: "1px solid #ede9fe",
+    background: "#0B0D12",
+    borderTop: "1px solid #222634",
   },
   quickBtn: {
     padding: "5px 11px",
     borderRadius: 20,
-    border: "1px solid #c4b5fd",
-    background: "white",
-    color: "#6366f1",
+    border: "1px solid #222634",
+    background: "#171B24",
+    color: "#9CA3AF",
     fontSize: 12,
     cursor: "pointer",
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
     fontWeight: 500,
     transition: "all 0.15s",
   },
@@ -431,29 +446,27 @@ const styles = {
     display: "flex",
     gap: 8,
     padding: "12px 14px",
-    borderTop: "1px solid #ede9fe",
-    background: "white",
-    alignItems: "flex-end",
+    borderTop: "1px solid #222634",
+    background: "#12151C",
+    alignItems: "center",
   },
-  textarea: {
+  input: {
     flex: 1,
-    resize: "none",
-    border: "1.5px solid #ddd6fe",
+    border: "1px solid #222634",
     borderRadius: 12,
-    padding: "9px 12px",
+    padding: "10px 12px",
     fontSize: 13.5,
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    fontFamily: "inherit",
     outline: "none",
-    lineHeight: 1.5,
-    color: "#1e1b4b",
-    background: "#fafaf8",
+    color: "#E5E7EB",
+    background: "#0B0D12",
     transition: "border-color 0.2s",
   },
   sendBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    background: "#7C5CFF",
     border: "none",
     cursor: "pointer",
     display: "flex",
@@ -465,9 +478,9 @@ const styles = {
   poweredBy: {
     textAlign: "center",
     fontSize: 10.5,
-    color: "#a5b4fc",
+    color: "#6B7280",
     padding: "4px 0 8px",
-    background: "white",
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    background: "#12151C",
+    borderTop: "1px solid #222634",
   },
 };
