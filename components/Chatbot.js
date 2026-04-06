@@ -16,10 +16,19 @@ function TypingIndicator() {
   );
 }
 
-function Message({ msg }) {
+function Message({ msg, index }) {
   const isUser = msg.role === "user";
   return (
-    <div style={{ ...styles.msgRow, justifyContent: isUser ? "flex-end" : "flex-start" }}>
+    <div
+      style={{
+        ...styles.msgRow,
+        justifyContent: isUser ? "flex-end" : "flex-start",
+        animation: `messageIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
+        opacity: 0,
+        transform: "scale(0.95) translateY(10px)",
+        animationDelay: `${Math.min(index * 0.05, 0.5)}s`,
+      }}
+    >
       {!isUser && <div style={styles.botAvatar}>{BOT_AVATAR}</div>}
       <div
         style={{
@@ -40,10 +49,11 @@ function Message({ msg }) {
 
 export default function Chatbot({ userContext }) {
   const [open, setOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hey! 👋 I'm your assistant. Ask me anything about interviews, resumes, or campus recruitment!",
+      content: "Hey! I'm your assistant. Ask me anything about interviews, resumes, or campus recruitment!",
     },
   ]);
   const [input, setInput] = useState("");
@@ -51,6 +61,54 @@ export default function Chatbot({ userContext }) {
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const [fabActive, setFabActive] = useState(false);
+  const [fabVisible, setFabVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  // Scroll listener to hide/show FAB
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+        setFabVisible(false);
+      } else {
+        setFabVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Inject global styles for hover effects (client-side only)
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      // Style for close button hover
+      const closeStyle = document.createElement("style");
+      closeStyle.textContent = `
+        button[title="Close chat"]:hover {
+          background: #DC2626 !important;
+          color: white !important;
+        }
+      `;
+      document.head.appendChild(closeStyle);
+
+      // Style for FAB hover
+      const fabHoverStyle = document.createElement("style");
+      fabHoverStyle.textContent = `
+        .chatbot-fab:hover {
+          transform: scale(1.05) !important;
+        }
+      `;
+      document.head.appendChild(fabHoverStyle);
+
+      return () => {
+        document.head.removeChild(closeStyle);
+        document.head.removeChild(fabHoverStyle);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -90,7 +148,7 @@ export default function Chatbot({ userContext }) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "⚠️ Connection error. Please try again." },
+        { role: "assistant", content: "Connection error. Please try again." },
       ]);
     } finally {
       setLoading(false);
@@ -113,50 +171,120 @@ export default function Chatbot({ userContext }) {
     ]);
   };
 
+  const toggleChat = () => {
+    if (open) {
+      setIsClosing(true);
+      setTimeout(() => {
+        setOpen(false);
+        setIsClosing(false);
+      }, 200);
+    } else {
+      setOpen(true);
+    }
+  };
+
+  const handleFabClick = () => {
+    setFabActive(true);
+    setTimeout(() => setFabActive(false), 150);
+    toggleChat();
+  };
+
+  const quickReplies = ["Resume tips", "Mock interview prep", "Top companies hiring", "Aptitude resources"];
+
   return (
     <>
-      <style>{keyframes}</style>
       <style>{`
-        @media (max-width: 600px) {
+        @keyframes messageIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeSlideDown {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to   { opacity: 0; transform: translateY(20px) scale(0.96); }
+        }
+        @keyframes blink {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40%           { transform: scale(1);   opacity: 1;   }
+        }
+        @keyframes fabClick {
+          0% { transform: scale(1); }
+          50% { transform: scale(0.88); }
+          100% { transform: scale(1); }
+        }
+        /* Desktop full-height sidebar */
+        @media (min-width: 769px) {
           .chatbot-window {
-            bottom: 80px !important;
-            right: 16px !important;
-            left: 16px !important;
-            width: auto !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 400px !important;
+            height: 100vh !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+          }
+        }
+        /* Mobile full-screen */
+        @media (max-width: 768px) {
+          .chatbot-window {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
             max-width: none !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            height: 100% !important;
+            max-height: none !important;
           }
-          .chatbot-fab {
-            bottom: 20px !important;
-            right: 20px !important;
-          }
+        }
+        .fab-click {
+          animation: fabClick 0.15s ease-out;
         }
       `}</style>
 
-      {/* Floating Trigger Button */}
-      <button
-        className="chatbot-fab"
-        onClick={() => setOpen((v) => !v)}
-        style={styles.fab}
-        aria-label="Open chatbot"
-      >
-        {open ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
+      {/* Floating Trigger Button - only show when chat is closed and visible */}
+      {!open && (
+        <button
+          className={`chatbot-fab ${fabActive ? "fab-click" : ""}`}
+          onClick={handleFabClick}
+          style={{
+            ...styles.fab,
+            transform: fabVisible ? "translateY(0)" : "translateY(120px)",
+            opacity: fabVisible ? 1 : 0,
+            transition: "transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1), opacity 0.25s ease",
+          }}
+          aria-label="Open chatbot"
+        >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-        )}
-        {!open && unread > 0 && (
-          <span style={styles.badge}>{unread}</span>
-        )}
-      </button>
+          {!open && unread > 0 && <span style={styles.badge}>{unread}</span>}
+        </button>
+      )}
 
       {/* Chat Window */}
       {open && (
-        <div className="chatbot-window" style={styles.window}>
+        <div
+          className="chatbot-window"
+          style={{
+            ...styles.window,
+            animation: isClosing ? "fadeSlideDown 0.2s ease-out forwards" : "fadeSlideUp 0.25s ease-out",
+          }}
+        >
           {/* Header */}
           <div style={styles.header}>
             <div style={styles.headerLeft}>
@@ -168,19 +296,28 @@ export default function Chatbot({ userContext }) {
                 </div>
               </div>
             </div>
-            <button onClick={clearChat} style={styles.clearBtn} title="Clear chat">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v6M14 11v6" />
-              </svg>
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={clearChat} style={styles.clearBtn} title="Clear chat">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+              </button>
+              {/* Red close button */}
+              <button onClick={toggleChat} style={styles.closeBtn} title="Close chat">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
           <div style={styles.messages}>
             {messages.map((msg, i) => (
-              <Message key={i} msg={msg} />
+              <Message key={i} msg={msg} index={i} />
             ))}
             {loading && <TypingIndicator />}
             <div ref={bottomRef} />
@@ -189,7 +326,7 @@ export default function Chatbot({ userContext }) {
           {/* Quick Prompts */}
           {messages.length === 1 && (
             <div style={styles.quickPrompts}>
-              {["Resume tips", "Mock interview prep", "Top companies hiring", "Aptitude resources"].map((q) => (
+              {quickReplies.map((q) => (
                 <button
                   key={q}
                   style={styles.quickBtn}
@@ -212,7 +349,7 @@ export default function Chatbot({ userContext }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Ask about placements, resumes, interviews…"
+              placeholder="Ask about placements, resumes, interviews..."
               style={styles.input}
             />
             <button
@@ -237,38 +374,21 @@ export default function Chatbot({ userContext }) {
   );
 }
 
-const keyframes = `
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)   scale(1);    }
-}
-@keyframes blink {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40%           { transform: scale(1);   opacity: 1;   }
-}
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(124,92,255,0.5); }
-  50%       { box-shadow: 0 0 0 10px rgba(124,92,255,0); }
-}
-`;
-
 const styles = {
   fab: {
     position: "fixed",
     bottom: 28,
     right: 28,
-    width: 56,
-    height: 56,
-    borderRadius: "50%",
-    background: "#7C5CFF",
+    width: 60,
+    height: 60,
+    borderRadius: "30px",
+    background: "linear-gradient(135deg, #7C5CFF, #5a3dcf)",
     border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 8px 25px rgba(124,92,255,0.45)",
     zIndex: 9999,
-    animation: "pulse 2.5s infinite",
     transition: "transform 0.2s",
   },
   badge: {
@@ -278,8 +398,8 @@ const styles = {
     background: "#EF4444",
     color: "white",
     borderRadius: "50%",
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     fontSize: 11,
     fontWeight: 700,
     display: "flex",
@@ -287,21 +407,13 @@ const styles = {
     justifyContent: "center",
   },
   window: {
-    position: "fixed",
-    bottom: 96,
-    right: 28,
-    width: 370,
-    maxWidth: "calc(100% - 32px)",
-    maxHeight: 560,
-    borderRadius: 20,
     background: "#12151C",
-    boxShadow: "0 0 0 2px rgba(124,92,255,0.2), 0 24px 60px rgba(0,0,0,0.4)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
     zIndex: 9998,
-    animation: "fadeSlideUp 0.25s ease",
-    border: "1px solid #222634",
+    borderLeft: "1px solid #222634",
+    boxShadow: "0 0 0 2px rgba(124,92,255,0.2), 0 24px 60px rgba(0,0,0,0.4)",
   },
   header: {
     background: "#0B0D12",
@@ -320,7 +432,7 @@ const styles = {
     width: 38,
     height: 38,
     borderRadius: "50%",
-    background: "rgba(124,92,255,0.2)",
+    background: "linear-gradient(135deg, rgba(124,92,255,0.2), rgba(124,92,255,0.05))",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -356,6 +468,17 @@ const styles = {
     alignItems: "center",
     transition: "background 0.2s",
   },
+  closeBtn: {
+    background: "rgba(220,38,38,0.2)",
+    border: "1px solid rgba(220,38,38,0.5)",
+    borderRadius: 8,
+    padding: "6px 8px",
+    cursor: "pointer",
+    color: "#EF4444",
+    display: "flex",
+    alignItems: "center",
+    transition: "all 0.2s",
+  },
   messages: {
     flex: 1,
     overflowY: "auto",
@@ -374,7 +497,7 @@ const styles = {
     width: 28,
     height: 28,
     borderRadius: "50%",
-    background: "rgba(124,92,255,0.15)",
+    background: "linear-gradient(135deg, rgba(124,92,255,0.15), rgba(124,92,255,0.05))",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -384,13 +507,13 @@ const styles = {
   bubble: {
     maxWidth: "78%",
     padding: "10px 13px",
-    borderRadius: 16,
+    borderRadius: 18,
     fontSize: 13.5,
     lineHeight: 1.55,
     wordBreak: "break-word",
   },
   userBubble: {
-    background: "#7C5CFF",
+    background: "linear-gradient(135deg, #7C5CFF, #6d4fe0)",
     color: "#FFFFFF",
     borderBottomRightRadius: 4,
   },
@@ -404,11 +527,14 @@ const styles = {
     display: "flex",
     alignItems: "flex-end",
     gap: 8,
+    animation: "messageIn 0.3s ease-out forwards",
+    opacity: 0,
+    transform: "scale(0.95) translateY(10px)",
   },
   typingBubble: {
     background: "#171B24",
     padding: "12px 16px",
-    borderRadius: 16,
+    borderRadius: 18,
     borderBottomLeftRadius: 4,
     display: "flex",
     gap: 5,
@@ -466,7 +592,7 @@ const styles = {
     width: 40,
     height: 40,
     borderRadius: 12,
-    background: "#7C5CFF",
+    background: "linear-gradient(135deg, #7C5CFF, #6d4fe0)",
     border: "none",
     cursor: "pointer",
     display: "flex",

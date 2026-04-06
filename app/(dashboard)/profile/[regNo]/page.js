@@ -199,10 +199,18 @@ async function downloadAllImages(images, title, showAlert) {
   showAlert('Download started!', 'success');
 }
 
-// ===================== ImageCarousel for Project Cards =====================
+// ===================== Enhanced ImageCarousel with swipe & slide animation =====================
 function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIndexChange }) {
   const [internalIndex, setInternalIndex] = useState(0);
   const index = externalIndex !== undefined ? externalIndex : internalIndex;
+
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [transitionEnabled, setTransitionEnabled] = useState(true);
+  const [didSwipe, setDidSwipe] = useState(false);
+  const containerRef = useRef(null);
 
   const setIndex = (newIndex) => {
     if (onIndexChange) {
@@ -212,40 +220,159 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
     }
   };
 
-  const next = () => {
+  const next = useCallback(() => {
+    if (images.length === 0) return;
     const newIndex = (index + 1) % images.length;
     setIndex(newIndex);
-  };
-  const prev = () => {
+  }, [images.length, index]);
+
+  const prev = useCallback(() => {
+    if (images.length === 0) return;
     const newIndex = (index - 1 + images.length) % images.length;
     setIndex(newIndex);
-  };
+  }, [images.length, index]);
+
+  // Touch / Mouse swipe handlers
+  const handleTouchStart = useCallback((e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+    setDidSwipe(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+    if (Math.abs(delta) > 10) setDidSwipe(true);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+    setTimeout(() => setDidSwipe(false), 100);
+  }, [isDragging, touchEnd, touchStart, prev, next]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setTouchStart(e.clientX);
+    setTouchEnd(e.clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+    setDidSwipe(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+    if (Math.abs(delta) > 10) setDidSwipe(true);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+    setTimeout(() => setDidSwipe(false), 100);
+  }, [isDragging, touchEnd, touchStart, prev, next]);
+
+  const handleImageClick = useCallback((idx, e) => {
+    if (didSwipe) {
+      e.stopPropagation();
+      return;
+    }
+    onImageClick?.(idx);
+  }, [didSwipe, onImageClick]);
+
+  // Cleanup global mouseup
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) handleMouseUp();
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging, handleMouseUp]);
 
   if (!images.length) return null;
 
+  const containerWidth = containerRef.current?.offsetWidth || 0;
+  const dragPercent = containerWidth ? (dragOffset / containerWidth) * 100 : 0;
+  const translateX = -index * 100 + dragPercent;
+
   return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#0B0D12' }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        borderRadius: 8,
+        overflow: 'hidden',
+        background: '#0B0D12',
+        touchAction: 'pan-y pinch-zoom',
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
       <div
-        style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16/9' }}
-        onClick={() => onImageClick?.(index)}
+        style={{
+          display: 'flex',
+          transition: transitionEnabled ? 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)' : 'none',
+          transform: `translateX(${translateX}%)`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+        }}
       >
-        <img
-          src={images[index]?.url}
-          alt={`Slide ${index + 1}`}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s',
-          }}
-          onMouseOver={(e) => (e.target.style.transform = 'scale(1.03)')}
-          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
-        />
+        {images.map((img, idx) => (
+          <div
+            key={idx}
+            style={{
+              flex: '0 0 100%',
+              position: 'relative',
+              aspectRatio: '16/9',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => handleImageClick(idx, e)}
+          >
+            <img
+              src={img.url}
+              alt={`Slide ${idx + 1}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s',
+                pointerEvents: isDragging ? 'none' : 'auto',
+              }}
+              onMouseOver={(e) => { if (!isDragging) e.target.style.transform = 'scale(1.03)'; }}
+              onMouseOut={(e) => { if (!isDragging) e.target.style.transform = 'scale(1)'; }}
+            />
+          </div>
+        ))}
       </div>
+
       {images.length > 1 && (
         <>
           <button
-            onClick={prev}
+            onClick={(e) => { e.stopPropagation(); prev(); }}
             style={{
               position: 'absolute',
               left: 8,
@@ -263,6 +390,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               color: '#fff',
               fontSize: 20,
               transition: 'background 0.2s',
+              zIndex: 2,
             }}
             onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
             onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
@@ -270,7 +398,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
             ‹
           </button>
           <button
-            onClick={next}
+            onClick={(e) => { e.stopPropagation(); next(); }}
             style={{
               position: 'absolute',
               right: 8,
@@ -288,6 +416,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               color: '#fff',
               fontSize: 20,
               transition: 'background 0.2s',
+              zIndex: 2,
             }}
             onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
             onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
@@ -302,12 +431,13 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               transform: 'translateX(-50%)',
               display: 'flex',
               gap: 6,
+              zIndex: 2,
             }}
           >
             {images.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setIndex(idx)}
+                onClick={(e) => { e.stopPropagation(); setIndex(idx); }}
                 style={{
                   width: idx === index ? 20 : 6,
                   height: 6,
@@ -326,35 +456,124 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
   );
 }
 
-// ===================== ImageModal (with closing animation) =====================
+// ===================== ImageModal with swipe support (NO DARK BACKGROUND, ONLY BLUR) =====================
 function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
+  // All hooks must be called unconditionally at the top
   const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
   const [isClosing, setIsClosing] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [transitionEnabled, setTransitionEnabled] = useState(true);
+  const modalImageRef = useRef(null);
 
+  const images = item ? (type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || []) : [];
+  const total = images.length;
+
+  // Update current index when item or initialImageIndex changes
   useEffect(() => {
     setCurrentIndex(initialImageIndex);
   }, [item, initialImageIndex]);
 
+  // Close handler (defined early, used in effects)
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 200);
+  }, [onClose]);
+
+  // Escape key listener
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') handleClose();
     };
     if (isOpen) document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      onClose();
-      setIsClosing(false);
-    }, 200);
-  };
+  // Swipe navigation handlers
+  const next = useCallback(() => {
+    if (total === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
 
+  const prev = useCallback(() => {
+    if (total === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const handleTouchStart = useCallback((e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50 && total > 1) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+  }, [isDragging, touchEnd, touchStart, prev, next, total]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setTouchStart(e.clientX);
+    setTouchEnd(e.clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50 && total > 1) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+  }, [isDragging, touchEnd, touchStart, prev, next, total]);
+
+  // Global mouseup cleanup
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) handleMouseUp();
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging, handleMouseUp]);
+
+  // If modal is completely closed, render nothing (after all hooks)
   if (!isOpen && !isClosing) return null;
 
-  const images = type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || [];
   const currentImage = images[currentIndex]?.url;
+  const containerWidth = modalImageRef.current?.offsetWidth || 0;
+  const dragPercent = containerWidth ? (dragOffset / containerWidth) * 100 : 0;
+  const translateX = -currentIndex * 100 + dragPercent;
 
   return (
     <div
@@ -366,7 +585,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
-        background: 'transparent',
+        background: 'transparent', // No dark background, only blur
         backdropFilter: 'blur(12px)',
         animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
       }}
@@ -397,7 +616,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
             flexShrink: 0,
           }}
         >
-          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item.title}</h3>
+          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item?.title}</h3>
           <button
             onClick={handleClose}
             style={{
@@ -419,25 +638,59 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
 
         <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div
+            ref={modalImageRef}
             style={{
               background: '#0B0D12',
               position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem',
-              minHeight: 260,
+              overflow: 'hidden',
+              touchAction: 'pan-y pinch-zoom',
             }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
           >
-            <img
-              src={currentImage}
-              alt={item.title}
-              style={{ maxHeight: '50vh', maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
-            />
-            {images.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                transition: transitionEnabled ? 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)' : 'none',
+                transform: `translateX(${translateX}%)`,
+                cursor: isDragging ? 'grabbing' : 'grab',
+              }}
+            >
+              {images.map((img, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    flex: '0 0 100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1.5rem',
+                    minHeight: 260,
+                  }}
+                >
+                  <img
+                    src={img.url}
+                    alt={item?.title}
+                    style={{
+                      maxHeight: '50vh',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: 8,
+                      pointerEvents: isDragging ? 'none' : 'auto',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {total > 1 && (
               <>
                 <button
-                  onClick={() => setCurrentIndex((p) => (p - 1 + images.length) % images.length)}
+                  onClick={(e) => { e.stopPropagation(); prev(); }}
                   style={{
                     position: 'absolute',
                     left: 12,
@@ -450,6 +703,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     cursor: 'pointer',
                     color: '#E5E7EB',
                     lineHeight: 0,
+                    zIndex: 3,
                   }}
                 >
                   <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -457,7 +711,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                   </svg>
                 </button>
                 <button
-                  onClick={() => setCurrentIndex((p) => (p + 1) % images.length)}
+                  onClick={(e) => { e.stopPropagation(); next(); }}
                   style={{
                     position: 'absolute',
                     right: 12,
@@ -470,6 +724,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     cursor: 'pointer',
                     color: '#E5E7EB',
                     lineHeight: 0,
+                    zIndex: 3,
                   }}
                 >
                   <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,12 +739,13 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     transform: 'translateX(-50%)',
                     display: 'flex',
                     gap: 6,
+                    zIndex: 3,
                   }}
                 >
                   {images.map((_, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setCurrentIndex(idx)}
+                      onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
                       style={{
                         width: idx === currentIndex ? 18 : 6,
                         height: 6,
@@ -507,27 +763,27 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
           </div>
 
           <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
-            {type === 'certificate' && item.issuedBy && (
+            {type === 'certificate' && item?.issuedBy && (
               <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
                 Issued by {item.issuedBy}
               </p>
             )}
-            {item.semester && (
+            {item?.semester && (
               <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
                 Semester {item.semester}
               </p>
             )}
             <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
-              {item.description}
+              {item?.description}
             </p>
-            {type === 'project' && item.techStack?.length > 0 && (
+            {type === 'project' && item?.techStack?.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {item.techStack.map((tech, i) => (
                   <span key={i} className="tech-chip">{tech}</span>
                 ))}
               </div>
             )}
-            {type === 'certificate' && item.tags?.length > 0 && (
+            {type === 'certificate' && item?.tags?.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {item.tags.map((tag, i) => (
                   <span key={i} className="tag-chip">#{tag}</span>

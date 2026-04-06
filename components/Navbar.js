@@ -93,11 +93,11 @@ export default function Navbar() {
 
   const isActive = (href) => pathname === href;
 
+  // Removed the duplicate "Profile" link from navLinks (only Feed, Jobs, Dashboard remain)
   const navLinks = user ? [
     { href: '/feed', label: 'Feed', show: true },
     { href: null, label: 'Jobs', show: user.role === 'student', onClick: handleJobsClick },
     { href: user.role === 'staff' ? '/staff' : '/admin', label: 'Dashboard', show: user.role === 'staff' || user.role === 'admin' },
-    { href: `/profile/${user.registerNumber}`, label: 'Profile', show: user.role === 'student' },
   ].filter(l => l.show) : [];
 
   return (
@@ -105,8 +105,9 @@ export default function Navbar() {
       <style>{`
         .nav-root {
           position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-          background: rgba(11,13,18,0.92); backdrop-filter: blur(20px) saturate(180%);
-          border-bottom: 1px solid #222634;
+          background: rgba(11, 13, 18, 0.75);
+          backdrop-filter: blur(24px) saturate(180%);
+          border-bottom: 1px solid rgba(34, 38, 52, 0.5);
         }
         .nav-inner {
           max-width: 1200px; margin: 0 auto; padding: 0 1.25rem;
@@ -138,10 +139,10 @@ export default function Navbar() {
         .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .nav-avatar-btn {
           display: flex; align-items: center; gap: 7px;
-          background: #171B24; border: 1px solid #222634; border-radius: 9px;
-          padding: 5px 10px 5px 5px; cursor: pointer; transition: border-color 0.15s; flex-shrink: 0;
+          background: rgba(23, 27, 36, 0.8); border: 1px solid rgba(34, 38, 52, 0.6); border-radius: 9px;
+          padding: 5px 10px 5px 5px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
         }
-        .nav-avatar-btn:hover { border-color: rgba(124,92,255,0.5); }
+        .nav-avatar-btn:hover { border-color: rgba(124,92,255,0.5); background: rgba(23, 27, 36, 0.95); }
         .nav-avatar {
           width: 24px; height: 24px; border-radius: 6px;
           background: rgba(124,92,255,0.2); border: 1px solid rgba(124,92,255,0.3);
@@ -162,7 +163,8 @@ export default function Navbar() {
         .nav-chevron.open { transform: rotate(180deg); }
         .nav-dropdown {
           position: absolute; top: calc(100% + 8px); right: 0;
-          background: #12151C; border: 1px solid #222634; border-radius: 12px;
+          background: rgba(18, 21, 28, 0.98); backdrop-filter: blur(8px);
+          border: 1px solid #222634; border-radius: 12px;
           min-width: 196px; padding: 5px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);
           animation: dropIn 0.12s ease;
         }
@@ -234,7 +236,7 @@ export default function Navbar() {
             <span className="nav-logo-text">SkillMatrix</span>
           </Link>
 
-          {/* Nav links — desktop */}
+          {/* Nav links — desktop (no duplicate profile) */}
           {user && (
             <div className="nav-links">
               {navLinks.map((link) =>
@@ -284,7 +286,7 @@ export default function Navbar() {
                       <div className="dropdown-divider" />
                     </div>
 
-                    {/* Profile */}
+                    {/* Profile - only appears here in dropdown, not in main nav */}
                     {user.role === 'student' && (
                       <Link href={`/profile/${user.registerNumber}`} className="dropdown-item" onClick={() => setShowUserMenu(false)}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>

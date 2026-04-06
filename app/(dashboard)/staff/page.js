@@ -185,6 +185,10 @@ export default function StaffDashboard() {
     cursor: 'pointer',
     transition: 'all 0.2s',
     fontFamily: 'inherit',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    whiteSpace: 'nowrap',
   };
 
   return (
@@ -284,7 +288,7 @@ export default function StaffDashboard() {
         {/* Filters */}
         <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="filter-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between' }}>
+            <div className="filter-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', color: '#6B7280', fontSize: 12, marginBottom: 6 }}>Search (name, regNo, interests, posts, tags...)</label>
                 <div style={{ position: 'relative' }}>
@@ -300,9 +304,11 @@ export default function StaffDashboard() {
                   </svg>
                 </div>
               </div>
-              <button onClick={handleResetFilters} style={buttonSecondaryStyle}>
-                Reset Filters
-              </button>
+              <div style={{ marginTop: 'auto', marginBottom: 'auto' }}>
+                <button onClick={handleResetFilters} style={buttonSecondaryStyle}>
+                  Reset Filters
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
