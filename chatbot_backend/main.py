@@ -16,12 +16,12 @@ frontend_url = os.getenv("FRONTEND_URL")
 
 origins = [
     "http://localhost:3000",
-    frontend_url
+    os.getenv("FRONTEND_URL")
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin for origin in origins if origin],
+    allow_origins=[o for o in origins if o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,7 +30,7 @@ app.add_middleware(
 # Check API key exists before starting
 api_key = os.getenv("GROQ_API_KEY")
 if not api_key:
-    raise RuntimeError("GROQ_API_KEY is missing. Add it to chatbot-backend/.env file.")
+    raise RuntimeError("GROQ_API_KEY is missing")
 
 client = Groq(api_key=api_key)
 
