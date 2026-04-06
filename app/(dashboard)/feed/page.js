@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import JobsFeed from '@/components/JobsFeed';
 
-// ===================== ImageCarousel =====================
+// ===================== Enhanced ImageCarousel with swipe & slide animation =====================
 function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIndexChange }) {
   const [internalIndex, setInternalIndex] = useState(0);
   const index = externalIndex !== undefined ? externalIndex : internalIndex;
+
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [transitionEnabled, setTransitionEnabled] = useState(true);
+  const [didSwipe, setDidSwipe] = useState(false);
+  const containerRef = useRef(null);
 
   const setIndex = (newIndex) => {
     if (onIndexChange) {
@@ -17,40 +25,159 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
     }
   };
 
-  const next = () => {
+  const next = useCallback(() => {
+    if (images.length === 0) return;
     const newIndex = (index + 1) % images.length;
     setIndex(newIndex);
-  };
-  const prev = () => {
+  }, [images.length, index]);
+
+  const prev = useCallback(() => {
+    if (images.length === 0) return;
     const newIndex = (index - 1 + images.length) % images.length;
     setIndex(newIndex);
-  };
+  }, [images.length, index]);
+
+  // Touch / Mouse swipe handlers
+  const handleTouchStart = useCallback((e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+    setDidSwipe(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+    if (Math.abs(delta) > 10) setDidSwipe(true);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+    setTimeout(() => setDidSwipe(false), 100);
+  }, [isDragging, touchEnd, touchStart, prev, next]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setTouchStart(e.clientX);
+    setTouchEnd(e.clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+    setDidSwipe(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+    if (Math.abs(delta) > 10) setDidSwipe(true);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+    setTimeout(() => setDidSwipe(false), 100);
+  }, [isDragging, touchEnd, touchStart, prev, next]);
+
+  const handleImageClick = useCallback((idx, e) => {
+    if (didSwipe) {
+      e.stopPropagation();
+      return;
+    }
+    onImageClick?.(idx);
+  }, [didSwipe, onImageClick]);
+
+  // Cleanup global mouseup
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) handleMouseUp();
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging, handleMouseUp]);
 
   if (!images.length) return null;
 
+  const containerWidth = containerRef.current?.offsetWidth || 0;
+  const dragPercent = containerWidth ? (dragOffset / containerWidth) * 100 : 0;
+  const translateX = -index * 100 + dragPercent;
+
   return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#0B0D12' }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        borderRadius: 8,
+        overflow: 'hidden',
+        background: '#0B0D12',
+        touchAction: 'pan-y pinch-zoom',
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
       <div
-        style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16/9' }}
-        onClick={() => onImageClick?.(index)}
+        style={{
+          display: 'flex',
+          transition: transitionEnabled ? 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)' : 'none',
+          transform: `translateX(${translateX}%)`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+        }}
       >
-        <img
-          src={images[index]?.url}
-          alt={`Slide ${index + 1}`}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s',
-          }}
-          onMouseOver={(e) => (e.target.style.transform = 'scale(1.03)')}
-          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
-        />
+        {images.map((img, idx) => (
+          <div
+            key={idx}
+            style={{
+              flex: '0 0 100%',
+              position: 'relative',
+              aspectRatio: '16/9',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => handleImageClick(idx, e)}
+          >
+            <img
+              src={img.url}
+              alt={`Slide ${idx + 1}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s',
+                pointerEvents: isDragging ? 'none' : 'auto',
+              }}
+              onMouseOver={(e) => { if (!isDragging) e.target.style.transform = 'scale(1.03)'; }}
+              onMouseOut={(e) => { if (!isDragging) e.target.style.transform = 'scale(1)'; }}
+            />
+          </div>
+        ))}
       </div>
+
       {images.length > 1 && (
         <>
           <button
-            onClick={prev}
+            onClick={(e) => { e.stopPropagation(); prev(); }}
             style={{
               position: 'absolute',
               left: 8,
@@ -68,6 +195,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               color: '#fff',
               fontSize: 20,
               transition: 'background 0.2s',
+              zIndex: 2,
             }}
             onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
             onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
@@ -75,7 +203,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
             ‹
           </button>
           <button
-            onClick={next}
+            onClick={(e) => { e.stopPropagation(); next(); }}
             style={{
               position: 'absolute',
               right: 8,
@@ -93,6 +221,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               color: '#fff',
               fontSize: 20,
               transition: 'background 0.2s',
+              zIndex: 2,
             }}
             onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
             onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
@@ -107,12 +236,13 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
               transform: 'translateX(-50%)',
               display: 'flex',
               gap: 6,
+              zIndex: 2,
             }}
           >
             {images.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setIndex(idx)}
+                onClick={(e) => { e.stopPropagation(); setIndex(idx); }}
                 style={{
                   width: idx === index ? 20 : 6,
                   height: 6,
@@ -131,26 +261,124 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
   );
 }
 
-// ===================== ImageModal =====================
+// ===================== ImageModal with swipe support (NO DARK BACKGROUND, ONLY BLUR) =====================
 function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
+  // All hooks must be called unconditionally at the top
   const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
+  const [isClosing, setIsClosing] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [transitionEnabled, setTransitionEnabled] = useState(true);
+  const modalImageRef = useRef(null);
 
+  const images = item ? (type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || []) : [];
+  const total = images.length;
+
+  // Update current index when item or initialImageIndex changes
   useEffect(() => {
     setCurrentIndex(initialImageIndex);
   }, [item, initialImageIndex]);
 
+  // Close handler (defined early, used in effects)
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 200);
+  }, [onClose]);
+
+  // Escape key listener
   useEffect(() => {
     const handleEsc = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     };
     if (isOpen) document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
-  if (!isOpen || !item) return null;
+  // Swipe navigation handlers
+  const next = useCallback(() => {
+    if (total === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
 
-  const images = type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || [];
+  const prev = useCallback(() => {
+    if (total === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const handleTouchStart = useCallback((e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50 && total > 1) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+  }, [isDragging, touchEnd, touchStart, prev, next, total]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setTouchStart(e.clientX);
+    setTouchEnd(e.clientX);
+    setIsDragging(true);
+    setTransitionEnabled(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    setTouchEnd(e.clientX);
+    const delta = touchEnd - touchStart;
+    setDragOffset(delta);
+  }, [isDragging, touchEnd, touchStart]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    setTransitionEnabled(true);
+    const delta = touchEnd - touchStart;
+    if (Math.abs(delta) > 50 && total > 1) {
+      if (delta > 0) prev();
+      else next();
+    }
+    setDragOffset(0);
+  }, [isDragging, touchEnd, touchStart, prev, next, total]);
+
+  // Global mouseup cleanup
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) handleMouseUp();
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging, handleMouseUp]);
+
+  // If modal is completely closed, render nothing (after all hooks)
+  if (!isOpen && !isClosing) return null;
+
   const currentImage = images[currentIndex]?.url;
+  const containerWidth = modalImageRef.current?.offsetWidth || 0;
+  const dragPercent = containerWidth ? (dragOffset / containerWidth) * 100 : 0;
+  const translateX = -currentIndex * 100 + dragPercent;
 
   return (
     <div
@@ -162,10 +390,11 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
-        background: 'rgba(0,0,0,0.88)',
+        background: 'transparent', // No dark background, only blur
         backdropFilter: 'blur(12px)',
+        animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
       }}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         style={{
@@ -178,6 +407,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
+          animation: isClosing ? 'slideOut 0.2s ease-out forwards' : 'slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -191,9 +421,9 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
             flexShrink: 0,
           }}
         >
-          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item.title}</h3>
+          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item?.title}</h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: '#171B24',
               border: '1px solid #222634',
@@ -213,25 +443,59 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
 
         <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div
+            ref={modalImageRef}
             style={{
               background: '#0B0D12',
               position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem',
-              minHeight: 260,
+              overflow: 'hidden',
+              touchAction: 'pan-y pinch-zoom',
             }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
           >
-            <img
-              src={currentImage}
-              alt={item.title}
-              style={{ maxHeight: '50vh', maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
-            />
-            {images.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                transition: transitionEnabled ? 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)' : 'none',
+                transform: `translateX(${translateX}%)`,
+                cursor: isDragging ? 'grabbing' : 'grab',
+              }}
+            >
+              {images.map((img, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    flex: '0 0 100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1.5rem',
+                    minHeight: 260,
+                  }}
+                >
+                  <img
+                    src={img.url}
+                    alt={item?.title}
+                    style={{
+                      maxHeight: '50vh',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: 8,
+                      pointerEvents: isDragging ? 'none' : 'auto',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {total > 1 && (
               <>
                 <button
-                  onClick={() => setCurrentIndex((p) => (p - 1 + images.length) % images.length)}
+                  onClick={(e) => { e.stopPropagation(); prev(); }}
                   style={{
                     position: 'absolute',
                     left: 12,
@@ -244,6 +508,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     cursor: 'pointer',
                     color: '#E5E7EB',
                     lineHeight: 0,
+                    zIndex: 3,
                   }}
                 >
                   <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +516,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                   </svg>
                 </button>
                 <button
-                  onClick={() => setCurrentIndex((p) => (p + 1) % images.length)}
+                  onClick={(e) => { e.stopPropagation(); next(); }}
                   style={{
                     position: 'absolute',
                     right: 12,
@@ -264,6 +529,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     cursor: 'pointer',
                     color: '#E5E7EB',
                     lineHeight: 0,
+                    zIndex: 3,
                   }}
                 >
                   <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,12 +544,13 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     transform: 'translateX(-50%)',
                     display: 'flex',
                     gap: 6,
+                    zIndex: 3,
                   }}
                 >
                   {images.map((_, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setCurrentIndex(idx)}
+                      onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
                       style={{
                         width: idx === currentIndex ? 18 : 6,
                         height: 6,
@@ -301,27 +568,27 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
           </div>
 
           <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
-            {type === 'certificate' && item.issuedBy && (
+            {type === 'certificate' && item?.issuedBy && (
               <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
                 Issued by {item.issuedBy}
               </p>
             )}
-            {item.semester && (
+            {item?.semester && (
               <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
                 Semester {item.semester}
               </p>
             )}
             <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
-              {item.description}
+              {item?.description}
             </p>
-            {type === 'project' && item.techStack?.length > 0 && (
+            {type === 'project' && item?.techStack?.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {item.techStack.map((tech, i) => (
                   <span key={i} className="tech-chip">{tech}</span>
                 ))}
               </div>
             )}
-            {type === 'certificate' && item.tags?.length > 0 && (
+            {type === 'certificate' && item?.tags?.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {item.tags.map((tag, i) => (
                   <span key={i} className="tag-chip">#{tag}</span>
@@ -331,6 +598,24 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -486,21 +771,21 @@ function FeedContent() {
           color: #6B7280; font-size: 11px; text-transform: uppercase;
           letter-spacing: 0.08em; margin-bottom: 10px; display: block;
         }
+        @media (max-width: 640px) {
+          .cert-card { padding: 14px; }
+          .action-btn-primary, .action-btn-ghost { padding: 6px 14px; font-size: 12px; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1rem' }}>
-        {/* Header - responsive */}
+        {/* Header */}
         <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div>
             <h1 style={{ color: '#E5E7EB', fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Activity Feed</h1>
             <p style={{ color: '#6B7280', fontSize: 14 }}>Latest certificates and projects from students</p>
           </div>
           {!showJobs && (
-            <button
-              onClick={() => setShowJobs(true)}
-              className="action-btn-primary"
-              style={{ whiteSpace: 'nowrap' }}
-            >
+            <button onClick={() => setShowJobs(true)} className="action-btn-primary" style={{ whiteSpace: 'nowrap' }}>
               Job Updates
             </button>
           )}
@@ -514,10 +799,7 @@ function FeedContent() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #222634', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h2 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, margin: 0 }}>Job Updates</h2>
-              <button
-                onClick={() => setShowJobs(false)}
-                style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 14, padding: '4px 8px' }}
-              >
+              <button onClick={() => setShowJobs(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 14, padding: '4px 8px' }}>
                 ✕ Close
               </button>
             </div>
@@ -563,7 +845,6 @@ function FeedContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {posts.map((post) => (
               <div key={post._id} className="cert-card">
-                {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div
                     style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
@@ -579,9 +860,7 @@ function FeedContent() {
                       )}
                     </div>
                     <div>
-                      <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>
-                        {post.owner?.name || 'Unknown User'}
-                      </p>
+                      <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{post.owner?.name || 'Unknown User'}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ color: '#6B7280', fontSize: 12 }}>{post.owner?.registerNumber}</span>
                         {post.owner?.batchYear && (
@@ -601,7 +880,6 @@ function FeedContent() {
                       </div>
                     </div>
                   </div>
-
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span
                       style={{
@@ -615,21 +893,13 @@ function FeedContent() {
                     >
                       {post.type === 'certificate' ? 'Certificate' : 'Project'}
                     </span>
-                    <span style={{ color: '#6B7280', fontSize: 11 }}>
-                      {formatDate(post.createdAt || post.date)}
-                    </span>
+                    <span style={{ color: '#6B7280', fontSize: 11 }}>{formatDate(post.createdAt || post.date)}</span>
                   </div>
                 </div>
 
-                {/* Content */}
-                {post.title && (
-                  <h4 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{post.title}</h4>
-                )}
-                <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>
-                  {post.description}
-                </p>
+                {post.title && <h4 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{post.title}</h4>}
+                <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>{post.description}</p>
 
-                {/* Media */}
                 {post.media && post.media.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     {post.media.length === 1 ? (
@@ -656,25 +926,18 @@ function FeedContent() {
                   </div>
                 )}
 
-                {/* Tech stack / tags */}
                 {post.type === 'project' && post.techStack && post.techStack.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-                    {post.techStack.map((tech, i) => (
-                      <span key={i} className="tech-chip">{tech}</span>
-                    ))}
+                    {post.techStack.map((tech, i) => <span key={i} className="tech-chip">{tech}</span>)}
                   </div>
                 )}
                 {post.tags && post.tags.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-                    {post.tags.map((tag, i) => (
-                      <span key={i} className="tag-chip" style={{ fontSize: 11 }}>#{tag}</span>
-                    ))}
+                    {post.tags.map((tag, i) => <span key={i} className="tag-chip" style={{ fontSize: 11 }}>#{tag}</span>)}
                   </div>
                 )}
                 {post.type === 'certificate' && post.issuedBy && (
-                  <p style={{ color: '#7C5CFF', fontSize: 12, marginBottom: 0 }}>
-                    Issued by {post.issuedBy}
-                  </p>
+                  <p style={{ color: '#7C5CFF', fontSize: 12, marginBottom: 0 }}>Issued by {post.issuedBy}</p>
                 )}
                 {post.type === 'project' && (post.githubLink || post.demoLink) && (
                   <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
@@ -699,18 +962,12 @@ function FeedContent() {
 
         {/* Refresh button */}
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <button
-            onClick={fetchPosts}
-            disabled={loading}
-            className="action-btn-ghost"
-            style={{ padding: '8px 20px' }}
-          >
+          <button onClick={fetchPosts} disabled={loading} className="action-btn-ghost" style={{ padding: '8px 20px' }}>
             {loading ? 'Refreshing...' : 'Refresh Feed'}
           </button>
         </div>
       </div>
 
-      {/* Modal */}
       <ImageModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

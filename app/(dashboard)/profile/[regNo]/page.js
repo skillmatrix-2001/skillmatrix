@@ -1,580 +1,592 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ResumeButton from "@/components/ResumeButton";
 import { useParams, useRouter } from 'next/navigation';
 
-export default function ProfilePage() {
-  const params = useParams();
-  const router = useRouter();
-  const regNo = params?.regNo || '';
+// ===================== Custom Alert System (with animations & red confirm) =====================
+function CustomAlert({ message, type, onConfirm, onCancel }) {
+  const [isClosing, setIsClosing] = useState(false);
 
-  const [user, setUser] = useState(null);
-  const [loggedInUser, setLoggedInUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('certificates');
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ bio: '', interests: '' });
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsed = JSON.parse(userData);
-        setLoggedInUser(parsed);
-      } catch (err) {
-        console.error('Error parsing user data:', err);
-      }
-    }
-    if (regNo && regNo !== 'undefined') {
-      fetchUserProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [regNo]);
-
-  const fetchUserProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/users/${regNo}`);
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setUser(data.user);
-        setEditData({
-          bio: data.user.profile?.bio || '',
-          interests: data.user.profile?.interests?.join(', ') || '',
-        });
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+  const handleClose = (confirmed) => {
+    setIsClosing(true);
+    setTimeout(() => {
+      if (confirmed) onConfirm?.();
+      else onCancel?.();
+    }, 200);
   };
 
-  const handleSave = async () => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (!userData) {
-        alert('Please log in first');
-        return;
-      }
-      const loggedInUserData = JSON.parse(userData);
-      const response = await fetch(`/api/users/${regNo}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: loggedInUserData._id,
-          role: loggedInUserData.role,
-          updates: {
-            profile: {
-              bio: editData.bio,
-              interests: editData.interests
-                .split(',')
-                .map((i) => i.trim())
-                .filter((i) => i),
-            },
-          },
-        }),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setUser(data.user);
-        setIsEditing(false);
-        alert('Profile updated!');
-      } else {
-        alert('Failed to update: ' + (data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Error updating profile');
-    }
-  };
-
-  const handleCancel = () => {
-    if (user) {
-      setEditData({
-        bio: user.profile?.bio || '',
-        interests: user.profile?.interests?.join(', ') || '',
-      });
-    }
-    setIsEditing(false);
-  };
-
-  const isOwnProfile =
-    loggedInUser &&
-    user &&
-    (loggedInUser._id === user._id ||
-      loggedInUser.registerNumber === user.registerNumber);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#0B0D12',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              border: '2px solid #222634',
-              borderTopColor: '#7C5CFF',
-              animation: 'spin 0.8s linear infinite',
-              margin: '0 auto',
-            }}
-          />
-          <p
-            style={{
-              marginTop: 16,
-              color: '#6B7280',
-              fontSize: 14,
-              letterSpacing: '0.05em',
-            }}
-          >
-            Loading profile
-          </p>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: '#0B0D12',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-        }}
-      >
-        <div
-          style={{
-            background: '#12151C',
-            border: '1px solid #222634',
-            borderRadius: 16,
-            padding: '2.5rem',
-            maxWidth: 420,
-            width: '100%',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              background: 'rgba(239,68,68,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-            }}
-          >
-            <svg
-              width="28"
-              height="28"
-              fill="none"
-              stroke="#EF4444"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </div>
-          <h3
-            style={{
-              color: '#E5E7EB',
-              fontSize: 18,
-              fontWeight: 600,
-              marginBottom: 8,
-            }}
-          >
-            User Not Found
-          </h3>
-          <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 24 }}>
-            No user found with register number{' '}
-            <code
-              style={{
-                background: '#171B24',
-                padding: '2px 8px',
-                borderRadius: 4,
-                color: '#9CA3AF',
-              }}
-            >
-              {regNo}
-            </code>
-          </p>
-          <button
-            onClick={() => router.push('/feed')}
-            style={{
-              width: '100%',
-              background: '#7C5CFF',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 0',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: 8,
-              fontSize: 14,
-            }}
-          >
-            Back to Feed
-          </button>
-          <button
-            onClick={fetchUserProfile}
-            style={{
-              width: '100%',
-              background: 'transparent',
-              color: '#9CA3AF',
-              border: '1px solid #222634',
-              borderRadius: 8,
-              padding: '10px 0',
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontSize: 14,
-            }}
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const isConfirm = type === 'confirm';
+  const borderColor = isConfirm ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.3)';
+  const textColor = isConfirm ? '#FCA5A5' : '#10B981';
+  const buttonBg = isConfirm ? '#DC2626' : '#7C5CFF';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0D12' }}>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .profile-input {
-          width: 100%; background: #0B0D12; border: 1px solid #222634;
-          border-radius: 8px; padding: 10px 14px; color: #E5E7EB;
-          font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box;
-          font-family: inherit;
-        }
-        .profile-input:focus { border-color: #7C5CFF; }
-        .profile-input::placeholder { color: #6B7280; }
-        .tab-btn {
-          background: none; border: none; cursor: pointer; font-size: 12px;
-          font-weight: 500; letter-spacing: 0.08em; padding: 14px 20px;
-          transition: color 0.2s; position: relative; text-transform: uppercase;
-          font-family: inherit;
-        }
-        .tab-btn.active { color: #E5E7EB; }
-        .tab-btn.inactive { color: #6B7280; }
-        .tab-btn.inactive:hover { color: #9CA3AF; }
-        .tab-btn.active::after {
-          content: ''; position: absolute; bottom: 0; left: 20px; right: 20px;
-          height: 2px; background: #7C5CFF; border-radius: 2px;
-        }
-        .action-btn-primary {
-          background: #7C5CFF; color: #fff; border: none; border-radius: 8px;
-          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
-          transition: background 0.2s; letter-spacing: 0.02em; font-family: inherit;
-        }
-        .action-btn-primary:hover { background: #6d4fe0; }
-        .action-btn-ghost {
-          background: transparent; color: #9CA3AF; border: 1px solid #222634; border-radius: 8px;
-          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
-          transition: all 0.2s; letter-spacing: 0.02em; font-family: inherit;
-        }
-        .action-btn-ghost:hover { border-color: #9CA3AF; color: #E5E7EB; }
-        .profile-card { background: #12151C; border: 1px solid #222634; border-radius: 16px; animation: fadeUp 0.4s ease; }
-        .tag-chip {
-          display: inline-block; background: #171B24; border: 1px solid #222634;
-          color: #9CA3AF; padding: 3px 10px; border-radius: 999px; font-size: 12px;
-          letter-spacing: 0.02em;
-        }
-        .skill-chip {
-          display: inline-block; background: rgba(124,92,255,0.1); border: 1px solid rgba(124,92,255,0.2);
-          color: #a78bfa; padding: 4px 12px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;
-        }
-        .tech-chip {
-          display: inline-block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15);
-          color: #4ade80; padding: 4px 10px; border-radius: 6px; font-size: 12px;
-        }
-        .delete-btn { background: none; border: none; cursor: pointer; color: #6B7280; font-size: 13px; transition: color 0.2s; font-family: inherit; padding: 4px; }
-        .delete-btn:hover { color: #EF4444; }
-        .cert-card {
-          background: #171B24; border: 1px solid #222634; border-radius: 12px; padding: 18px;
-          transition: border-color 0.2s;
-        }
-        .cert-card:hover { border-color: #2d3148; }
-        .section-label {
-          color: #6B7280; font-size: 11px; text-transform: uppercase;
-          letter-spacing: 0.08em; margin-bottom: 10px; display: block;
-        }
-        @media (max-width: 1024px) {
-          .profile-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 640px) {
-          .tab-btn { padding: 12px 12px; font-size: 10px; }
-        }
-      `}</style>
-
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div
-          className="profile-grid"
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
+      }}
+    >
+      <div
+        style={{
+          background: '#12151C',
+          border: `1px solid ${borderColor}`,
+          borderRadius: 12,
+          padding: '1.5rem',
+          maxWidth: 400,
+          width: '100%',
+          textAlign: 'center',
+          animation: isClosing ? 'slideOut 0.2s ease-out forwards' : 'slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+        }}
+      >
+        <p
           style={{
-            display: 'grid',
-            gridTemplateColumns: '290px 1fr',
-            gap: '1.5rem',
-            alignItems: 'start',
+            color: textColor,
+            fontSize: 15,
+            fontWeight: 600,
+            marginBottom: 24,
+            lineHeight: 1.5,
           }}
         >
-          {/* LEFT COLUMN */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="profile-card" style={{ padding: '1.75rem 1.5rem' }}>
-              <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: '50%',
-                    margin: '0 auto 14px',
-                    background:
-                      'linear-gradient(135deg, rgba(124,92,255,0.25), rgba(124,92,255,0.05))',
-                    border: '1px solid rgba(124,92,255,0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 28,
-                      fontWeight: 700,
-                      color: '#7C5CFF',
-                    }}
-                  >
-                    {user.name?.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <h1
-                  style={{
-                    color: '#E5E7EB',
-                    fontSize: 18,
-                    fontWeight: 700,
-                    margin: '0 0 4px',
-                  }}
-                >
-                  {user.name || 'Unknown'}
-                </h1>
-                <p
-                  style={{
-                    color: '#6B7280',
-                    fontSize: 12,
-                    margin: '0 0 10px',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  {user.registerNumber || user.staffId}
-                </p>
-                {user.department && (
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      background: 'rgba(124,92,255,0.1)',
-                      border: '1px solid rgba(124,92,255,0.2)',
-                      color: '#a78bfa',
-                      padding: '3px 12px',
-                      borderRadius: 999,
-                      fontSize: 11,
-                      fontWeight: 500,
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    {user.department}
-                  </span>
-                )}
-                {user.batchYear && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      background: '#171B24',
-                      border: '1px solid #222634',
-                      borderRadius: 8,
-                      padding: '5px 14px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: '#6B7280',
-                        fontSize: 11,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Batch
-                    </span>
-                    <span style={{ color: '#E5E7EB', fontSize: 12, fontWeight: 600 }}>
-                      {user.batchYear}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, background: '#222634', marginBottom: '1.25rem' }} />
-
-              <div style={{ marginBottom: 16 }}>
-                <span className="section-label">About</span>
-                {isEditing ? (
-                  <textarea
-                    value={editData.bio}
-                    onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
-                    className="profile-input"
-                    rows={3}
-                    placeholder="Write about yourself..."
-                    style={{ resize: 'vertical' }}
-                  />
-                ) : (
-                  <p
-                    style={{
-                      color: user.profile?.bio ? '#9CA3AF' : '#6B7280',
-                      fontSize: 13,
-                      lineHeight: 1.7,
-                      margin: 0,
-                    }}
-                  >
-                    {user.profile?.bio || 'No bio yet.'}
-                  </p>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <span className="section-label">Interests</span>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.interests}
-                    onChange={(e) =>
-                      setEditData({ ...editData, interests: e.target.value })
-                    }
-                    className="profile-input"
-                    placeholder="Design, AI, Web Dev..."
-                  />
-                ) : user.profile?.interests?.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {user.profile.interests.map((interest, index) => (
-                      <span key={index} className="tag-chip">
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>
-                    No interests yet.
-                  </p>
-                )}
-              </div>
-
-              {isOwnProfile && (
-                <>
-                  <div
-                    style={{ height: 1, background: '#222634', marginBottom: '1rem' }}
-                  />
-                  {isEditing ? (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={handleSave} className="action-btn-primary" style={{ flex: 1 }}>
-                        Save
-                      </button>
-                      <button onClick={handleCancel} className="action-btn-ghost" style={{ flex: 1 }}>
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="action-btn-ghost"
-                      style={{ width: '100%' }}
-                    >
-                      Edit Profile
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN */}
-          <div className="profile-card" style={{ overflow: 'hidden' }}>
-            <div style={{ borderBottom: '1px solid #222634', display: 'flex' }}>
-              {[
-                { id: 'certificates', label: 'Certificates' },
-                { id: 'projects', label: 'Projects' },
-                { id: 'resume', label: 'Resume' },
-              ].map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`tab-btn ${activeTab === id ? 'active' : 'inactive'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div style={{ padding: '1.75rem' }}>
-              {activeTab === 'certificates' && (
-                <CertificateSection userId={user._id} isOwnProfile={isOwnProfile} />
-              )}
-              {activeTab === 'projects' && (
-                <ProjectSection userId={user._id} isOwnProfile={isOwnProfile} />
-              )}
-              {activeTab === 'resume' && (
-                <div>
-                  <ResumeSection
-                    user={user}
-                    isOwnProfile={isOwnProfile}
-                    regNo={regNo}
-                    onUpdate={setUser}
-                  />
-                  <div
-                    style={{
-                      marginTop: 24,
-                      paddingTop: 24,
-                      borderTop: '1px solid #222634',
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                    }}
-                  >
-                    <ResumeButton regNo={regNo} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {message}
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          {isConfirm ? (
+            <>
+              <button
+                onClick={() => handleClose(true)}
+                style={{
+                  background: buttonBg,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'background 0.2s',
+                }}
+                onMouseOver={(e) => (e.target.style.background = '#B91C1C')}
+                onMouseOut={(e) => (e.target.style.background = buttonBg)}
+              >
+                Yes, Delete
+              </button>
+              <button
+                onClick={() => handleClose(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #222634',
+                  color: '#9CA3AF',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => (e.target.style.background = '#171B24')}
+                onMouseOut={(e) => (e.target.style.background = 'transparent')}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleClose(true)}
+              style={{
+                background: buttonBg,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 20px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                transition: 'background 0.2s',
+              }}
+              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOut={(e) => (e.target.style.background = buttonBg)}
+            >
+              OK
+            </button>
+          )}
         </div>
       </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
     </div>
   );
 }
 
-/* ──────────────────── ResumeSection (unchanged) ──────────────────── */
-function ResumeSection({ user, isOwnProfile, regNo, onUpdate }) {
+function useCustomAlert() {
+  const [alert, setAlert] = useState(null);
+
+  const showAlert = (message, type = 'info') => {
+    return new Promise((resolve) => {
+      setAlert({ message, type, resolve });
+    });
+  };
+
+  const AlertComponent = alert ? (
+    <CustomAlert
+      message={alert.message}
+      type={alert.type}
+      onConfirm={() => {
+        if (alert.resolve) alert.resolve(true);
+        setAlert(null);
+      }}
+      onCancel={() => {
+        if (alert.resolve) alert.resolve(false);
+        setAlert(null);
+      }}
+    />
+  ) : null;
+
+  return { showAlert, AlertComponent };
+}
+
+// ===================== Helper: Download all images as ZIP (for projects) =====================
+async function downloadAllImages(images, title, showAlert) {
+  if (!images || images.length === 0) {
+    showAlert('No images to download.', 'error');
+    return;
+  }
+  const zip = new JSZip();
+  const folder = zip.folder(`${title}_images`);
+  for (let i = 0; i < images.length; i++) {
+    const url = images[i].url;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const ext = url.split('.').pop().split('?')[0] || 'jpg';
+      folder.file(`image_${i + 1}.${ext}`, blob);
+    } catch (err) {
+      console.error(`Failed to download ${url}:`, err);
+    }
+  }
+  const content = await zip.generateAsync({ type: 'blob' });
+  saveAs(content, `${title}.zip`);
+  showAlert('Download started!', 'success');
+}
+
+// ===================== ImageCarousel for Project Cards =====================
+function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIndexChange }) {
+  const [internalIndex, setInternalIndex] = useState(0);
+  const index = externalIndex !== undefined ? externalIndex : internalIndex;
+
+  const setIndex = (newIndex) => {
+    if (onIndexChange) {
+      onIndexChange(newIndex);
+    } else {
+      setInternalIndex(newIndex);
+    }
+  };
+
+  const next = () => {
+    const newIndex = (index + 1) % images.length;
+    setIndex(newIndex);
+  };
+  const prev = () => {
+    const newIndex = (index - 1 + images.length) % images.length;
+    setIndex(newIndex);
+  };
+
+  if (!images.length) return null;
+
+  return (
+    <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#0B0D12' }}>
+      <div
+        style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16/9' }}
+        onClick={() => onImageClick?.(index)}
+      >
+        <img
+          src={images[index]?.url}
+          alt={`Slide ${index + 1}`}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'transform 0.3s',
+          }}
+          onMouseOver={(e) => (e.target.style.transform = 'scale(1.03)')}
+          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
+        />
+      </div>
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            style={{
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(0,0,0,0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 20,
+              transition: 'background 0.2s',
+            }}
+            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
+            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
+          >
+            ‹
+          </button>
+          <button
+            onClick={next}
+            style={{
+              position: 'absolute',
+              right: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(0,0,0,0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 20,
+              transition: 'background 0.2s',
+            }}
+            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
+            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
+          >
+            ›
+          </button>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: 6,
+            }}
+          >
+            {images.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setIndex(idx)}
+                style={{
+                  width: idx === index ? 20 : 6,
+                  height: 6,
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: idx === index ? '#7C5CFF' : 'rgba(255,255,255,0.5)',
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ===================== ImageModal (with closing animation) =====================
+function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
+  const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    setCurrentIndex(initialImageIndex);
+  }, [item, initialImageIndex]);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 200);
+  };
+
+  if (!isOpen && !isClosing) return null;
+
+  const images = type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || [];
+  const currentImage = images[currentIndex]?.url;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        background: 'transparent',
+        backdropFilter: 'blur(12px)',
+        animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
+      }}
+      onClick={handleClose}
+    >
+      <div
+        style={{
+          background: '#12151C',
+          border: '1px solid #222634',
+          borderRadius: 16,
+          overflow: 'hidden',
+          maxWidth: 860,
+          width: '100%',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: isClosing ? 'slideOut 0.2s ease-out forwards' : 'slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 18px',
+            borderBottom: '1px solid #222634',
+            flexShrink: 0,
+          }}
+        >
+          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item.title}</h3>
+          <button
+            onClick={handleClose}
+            style={{
+              background: '#171B24',
+              border: '1px solid #222634',
+              borderRadius: 8,
+              padding: '6px 8px',
+              cursor: 'pointer',
+              color: '#9CA3AF',
+              display: 'flex',
+              lineHeight: 0,
+            }}
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              background: '#0B0D12',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem',
+              minHeight: 260,
+            }}
+          >
+            <img
+              src={currentImage}
+              alt={item.title}
+              style={{ maxHeight: '50vh', maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
+            />
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentIndex((p) => (p - 1 + images.length) % images.length)}
+                  style={{
+                    position: 'absolute',
+                    left: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid #222634',
+                    borderRadius: 8,
+                    padding: '8px',
+                    cursor: 'pointer',
+                    color: '#E5E7EB',
+                    lineHeight: 0,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCurrentIndex((p) => (p + 1) % images.length)}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid #222634',
+                    borderRadius: 8,
+                    padding: '8px',
+                    cursor: 'pointer',
+                    color: '#E5E7EB',
+                    lineHeight: 0,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 14,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: 6,
+                  }}
+                >
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      style={{
+                        width: idx === currentIndex ? 18 : 6,
+                        height: 6,
+                        borderRadius: 999,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        background: idx === currentIndex ? '#7C5CFF' : 'rgba(255,255,255,0.2)',
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
+            {type === 'certificate' && item.issuedBy && (
+              <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
+                Issued by {item.issuedBy}
+              </p>
+            )}
+            {item.semester && (
+              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
+                Semester {item.semester}
+              </p>
+            )}
+            <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
+              {item.description}
+            </p>
+            {type === 'project' && item.techStack?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {item.techStack.map((tech, i) => (
+                  <span key={i} className="tech-chip">{tech}</span>
+                ))}
+              </div>
+            )}
+            {type === 'certificate' && item.tags?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {item.tags.map((tag, i) => (
+                  <span key={i} className="tag-chip">#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ===================== ResumeSection (stable Block component) =====================
+const Block = ({ title, children }) => (
+  <div
+    style={{
+      background: '#171B24',
+      border: '1px solid #222634',
+      borderRadius: 12,
+      padding: '1.25rem',
+      marginBottom: 12,
+    }}
+  >
+    <span
+      style={{
+        color: '#6B7280',
+        fontSize: 11,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        display: 'block',
+        marginBottom: 12,
+      }}
+    >
+      {title}
+    </span>
+    {children}
+  </div>
+);
+
+function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedInUser }) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -664,12 +676,12 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate }) {
       if (response.ok && data.success) {
         onUpdate(data.user);
         setIsEditing(false);
-        alert('Resume updated!');
+        showAlert('Resume updated!', 'success');
       } else {
-        alert('Failed to update: ' + (data.error || 'Unknown error'));
+        showAlert('Failed to update: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch (error) {
-      alert('Error updating resume');
+      showAlert('Error updating resume', 'error');
     } finally {
       setSaving(false);
     }
@@ -697,37 +709,15 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate }) {
 
   const profile = user?.profile || {};
 
-  const Block = ({ title, children }) => (
-    <div
-      style={{
-        background: '#171B24',
-        border: '1px solid #222634',
-        borderRadius: 12,
-        padding: '1.25rem',
-        marginBottom: 12,
-      }}
-    >
-      <span
-        style={{
-          color: '#6B7280',
-          fontSize: 11,
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-          display: 'block',
-          marginBottom: 12,
-        }}
-      >
-        {title}
-      </span>
-      {children}
-    </div>
-  );
+  // Determine if ResumeButton should be visible: own profile OR any staff
+  const showResumeButton = isOwnProfile || loggedInUser?.role === 'staff';
 
   return (
     <div>
-      {isOwnProfile && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
-          {isEditing ? (
+      {/* Action row: Edit Resume button + Generate Resume button */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
+        {isOwnProfile && (
+          isEditing ? (
             <>
               <button
                 onClick={handleSave}
@@ -745,9 +735,10 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate }) {
             <button onClick={() => setIsEditing(true)} className="action-btn-ghost">
               Edit Resume
             </button>
-          )}
-        </div>
-      )}
+          )
+        )}
+        {showResumeButton && <ResumeButton regNo={regNo} />}
+      </div>
 
       <Block title="Designation">
         {isEditing ? (
@@ -1092,158 +1083,8 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate }) {
   );
 }
 
-/* ──────────────────── Helper: Download all images as ZIP (for projects) ──────────────────── */
-async function downloadAllImages(images, title) {
-  if (!images || images.length === 0) {
-    alert('No images to download.');
-    return;
-  }
-  const zip = new JSZip();
-  const folder = zip.folder(`${title}_images`);
-  for (let i = 0; i < images.length; i++) {
-    const url = images[i].url;
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const ext = url.split('.').pop().split('?')[0] || 'jpg';
-      folder.file(`image_${i + 1}.${ext}`, blob);
-    } catch (err) {
-      console.error(`Failed to download ${url}:`, err);
-    }
-  }
-  const content = await zip.generateAsync({ type: 'blob' });
-  saveAs(content, `${title}.zip`);
-}
-
-/* ──────────────────── ImageCarousel for Project Cards (fixed) ──────────────────── */
-function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIndexChange }) {
-  const [internalIndex, setInternalIndex] = useState(0);
-  const index = externalIndex !== undefined ? externalIndex : internalIndex;
-
-  const setIndex = (newIndex) => {
-    if (onIndexChange) {
-      onIndexChange(newIndex);
-    } else {
-      setInternalIndex(newIndex);
-    }
-  };
-
-  const next = () => {
-    const newIndex = (index + 1) % images.length;
-    setIndex(newIndex);
-  };
-  const prev = () => {
-    const newIndex = (index - 1 + images.length) % images.length;
-    setIndex(newIndex);
-  };
-
-  if (!images.length) return null;
-
-  return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden', background: '#0B0D12' }}>
-      <div
-        style={{ cursor: 'pointer', position: 'relative', aspectRatio: '16/9' }}
-        onClick={() => onImageClick?.(index)}
-      >
-        <img
-          src={images[index]?.url}
-          alt={`Slide ${index + 1}`}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.3s',
-          }}
-          onMouseOver={(e) => (e.target.style.transform = 'scale(1.03)')}
-          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
-        />
-      </div>
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={prev}
-            style={{
-              position: 'absolute',
-              left: 8,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'rgba(0,0,0,0.6)',
-              border: 'none',
-              borderRadius: '50%',
-              width: 32,
-              height: 32,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#fff',
-              fontSize: 20,
-              transition: 'background 0.2s',
-            }}
-            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
-            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
-          >
-            ‹
-          </button>
-          <button
-            onClick={next}
-            style={{
-              position: 'absolute',
-              right: 8,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'rgba(0,0,0,0.6)',
-              border: 'none',
-              borderRadius: '50%',
-              width: 32,
-              height: 32,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#fff',
-              fontSize: 20,
-              transition: 'background 0.2s',
-            }}
-            onMouseOver={(e) => (e.target.style.background = 'rgba(0,0,0,0.8)')}
-            onMouseOut={(e) => (e.target.style.background = 'rgba(0,0,0,0.6)')}
-          >
-            ›
-          </button>
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 8,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              gap: 6,
-            }}
-          >
-            {images.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setIndex(idx)}
-                style={{
-                  width: idx === index ? 20 : 6,
-                  height: 6,
-                  borderRadius: 999,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  background: idx === index ? '#7C5CFF' : 'rgba(255,255,255,0.5)',
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/* ──────────────────── CertificateSection (with fixed download and column layout) ──────────────────── */
-function CertificateSection({ userId, isOwnProfile }) {
+// ==================== CertificateSection ====================
+function CertificateSection({ userId, isOwnProfile, showAlert }) {
   const [certificates, setCertificates] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1256,6 +1097,7 @@ function CertificateSection({ userId, isOwnProfile }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [closingDropdownId, setClosingDropdownId] = useState(null);
 
   useEffect(() => {
     fetchCertificates();
@@ -1277,7 +1119,7 @@ function CertificateSection({ userId, isOwnProfile }) {
     if (!file) return;
     const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowed.includes(file.type)) {
-      alert('Please select a valid image file');
+      showAlert('Please select a valid image file', 'error');
       return;
     }
     setSelectedFile(file);
@@ -1294,7 +1136,7 @@ function CertificateSection({ userId, isOwnProfile }) {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.description.trim() || !selectedFile) {
-      alert('Please fill all required fields');
+      showAlert('Please fill all required fields', 'error');
       return;
     }
     setUploading(true);
@@ -1315,29 +1157,31 @@ function CertificateSection({ userId, isOwnProfile }) {
         setShowForm(false);
         setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' });
         clearFile();
-        alert('Certificate uploaded!');
+        showAlert('Certificate uploaded!', 'success');
       } else {
-        alert('Upload failed: ' + (data.error || 'Unknown error'));
+        showAlert('Upload failed: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch {
-      alert('Network error.');
+      showAlert('Network error.', 'error');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (postId) => {
-    if (!window.confirm('Delete this certificate?')) return;
+    const confirmed = await showAlert('Delete this certificate? This action cannot be undone.', 'confirm');
+    if (!confirmed) return;
     try {
       const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
       const data = await response.json();
       if (response.ok && data.success) {
         setCertificates(certificates.filter((c) => c._id !== postId));
+        showAlert('Certificate deleted!', 'success');
       } else {
-        alert('Delete failed');
+        showAlert('Delete failed', 'error');
       }
     } catch {
-      alert('Network error');
+      showAlert('Network error', 'error');
     }
   };
 
@@ -1350,13 +1194,13 @@ function CertificateSection({ userId, isOwnProfile }) {
   const handleEditSave = (updatedPost) => {
     setCertificates((prev) => prev.map((c) => (c._id === updatedPost._id ? updatedPost : c)));
     setEditModalOpen(false);
+    showAlert('Certificate updated!', 'success');
   };
 
-  // Fixed download: fetch as blob and trigger download
   const handleDownload = async (cert) => {
     const imageUrl = cert.media?.[0]?.url;
     if (!imageUrl) {
-      alert('No image to download');
+      showAlert('No image to download', 'error');
       return;
     }
     try {
@@ -1370,9 +1214,21 @@ function CertificateSection({ userId, isOwnProfile }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
+      showAlert('Download started!', 'success');
     } catch (err) {
-      console.error('Download failed:', err);
-      alert('Failed to download image');
+      showAlert('Failed to download image', 'error');
+    }
+  };
+
+  const toggleDropdown = (id) => {
+    if (activeDropdownId === id) {
+      setClosingDropdownId(id);
+      setTimeout(() => {
+        setActiveDropdownId(null);
+        setClosingDropdownId(null);
+      }, 150);
+    } else {
+      setActiveDropdownId(id);
     }
   };
 
@@ -1402,7 +1258,7 @@ function CertificateSection({ userId, isOwnProfile }) {
   return (
     <>
       {isOwnProfile && !showForm && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <button onClick={() => setShowForm(true)} className="action-btn-primary">
             + Add Certificate
           </button>
@@ -1629,13 +1485,13 @@ function CertificateSection({ userId, isOwnProfile }) {
                 {isOwnProfile && (
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setActiveDropdownId(activeDropdownId === cert._id ? null : cert._id)}
+                      onClick={() => toggleDropdown(cert._id)}
                       className="delete-btn"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}
                     >
                       ⋮
                     </button>
-                    {activeDropdownId === cert._id && (
+                    {(activeDropdownId === cert._id || closingDropdownId === cert._id) && (
                       <div
                         style={{
                           position: 'absolute',
@@ -1646,6 +1502,7 @@ function CertificateSection({ userId, isOwnProfile }) {
                           borderRadius: 8,
                           zIndex: 10,
                           minWidth: 90,
+                          animation: closingDropdownId === cert._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out',
                         }}
                       >
                         <button
@@ -1760,13 +1617,24 @@ function CertificateSection({ userId, isOwnProfile }) {
         item={editItem}
         type="certificate"
         onSave={handleEditSave}
+        showAlert={showAlert}
       />
+      <style jsx>{`
+        @keyframes dropdownIn {
+          from { opacity: 0; transform: scale(0.9) translateY(-5px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes dropdownOut {
+          from { opacity: 1; transform: scale(1) translateY(0); }
+          to { opacity: 0; transform: scale(0.9) translateY(-5px); }
+        }
+      `}</style>
     </>
   );
 }
 
-/* ──────────────────── ProjectSection (unchanged except download uses helper) ──────────────────── */
-function ProjectSection({ userId, isOwnProfile }) {
+// ==================== ProjectSection ====================
+function ProjectSection({ userId, isOwnProfile, showAlert }) {
   const [projects, setProjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1780,6 +1648,7 @@ function ProjectSection({ userId, isOwnProfile }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [closingDropdownId, setClosingDropdownId] = useState(null);
   const [carouselIndices, setCarouselIndices] = useState({});
 
   useEffect(() => {
@@ -1816,7 +1685,7 @@ function ProjectSection({ userId, isOwnProfile }) {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.description.trim() || !selectedFiles.length) {
-      alert('Please fill all required fields and add at least one image');
+      showAlert('Please fill all required fields and add at least one image', 'error');
       return;
     }
     setUploading(true);
@@ -1840,29 +1709,31 @@ function ProjectSection({ userId, isOwnProfile }) {
         previewUrls.forEach((url) => URL.revokeObjectURL(url));
         setSelectedFiles([]);
         setPreviewUrls([]);
-        alert('Project uploaded!');
+        showAlert('Project uploaded!', 'success');
       } else {
-        alert('Upload failed: ' + (data.error || 'Unknown error'));
+        showAlert('Upload failed: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch {
-      alert('Network error.');
+      showAlert('Network error.', 'error');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (postId) => {
-    if (!window.confirm('Delete this project?')) return;
+    const confirmed = await showAlert('Delete this project? This action cannot be undone.', 'confirm');
+    if (!confirmed) return;
     try {
       const response = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
       const data = await response.json();
       if (response.ok && data.success) {
         setProjects(projects.filter((p) => p._id !== postId));
+        showAlert('Project deleted!', 'success');
       } else {
-        alert('Delete failed');
+        showAlert('Delete failed', 'error');
       }
     } catch {
-      alert('Network error');
+      showAlert('Network error', 'error');
     }
   };
 
@@ -1875,21 +1746,34 @@ function ProjectSection({ userId, isOwnProfile }) {
   const handleEditSave = (updatedPost) => {
     setProjects((prev) => prev.map((p) => (p._id === updatedPost._id ? updatedPost : p)));
     setEditModalOpen(false);
+    showAlert('Project updated!', 'success');
   };
 
   const handleDownload = (project) => {
     const images = project.media || [];
     if (images.length === 0) {
-      alert('No images to download');
+      showAlert('No images to download', 'error');
       return;
     }
-    downloadAllImages(images, project.title || 'project');
+    downloadAllImages(images, project.title || 'project', showAlert);
   };
 
   const handleImageClick = (project, idx) => {
     setSelectedProject(project);
     setSelectedImageIndex(idx);
     setModalOpen(true);
+  };
+
+  const toggleDropdown = (id) => {
+    if (activeDropdownId === id) {
+      setClosingDropdownId(id);
+      setTimeout(() => {
+        setActiveDropdownId(null);
+        setClosingDropdownId(null);
+      }, 150);
+    } else {
+      setActiveDropdownId(id);
+    }
   };
 
   if (loading)
@@ -1912,7 +1796,7 @@ function ProjectSection({ userId, isOwnProfile }) {
   return (
     <>
       {isOwnProfile && !showForm && (
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <button onClick={() => setShowForm(true)} className="action-btn-primary">
             + Add Project
           </button>
@@ -2166,13 +2050,13 @@ function ProjectSection({ userId, isOwnProfile }) {
                 {isOwnProfile && (
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setActiveDropdownId(activeDropdownId === project._id ? null : project._id)}
+                      onClick={() => toggleDropdown(project._id)}
                       className="delete-btn"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}
                     >
                       ⋮
                     </button>
-                    {activeDropdownId === project._id && (
+                    {(activeDropdownId === project._id || closingDropdownId === project._id) && (
                       <div
                         style={{
                           position: 'absolute',
@@ -2183,6 +2067,7 @@ function ProjectSection({ userId, isOwnProfile }) {
                           borderRadius: 8,
                           zIndex: 10,
                           minWidth: 90,
+                          animation: closingDropdownId === project._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out',
                         }}
                       >
                         <button
@@ -2291,12 +2176,23 @@ function ProjectSection({ userId, isOwnProfile }) {
         item={editItem}
         type="project"
         onSave={handleEditSave}
+        showAlert={showAlert}
       />
+      <style jsx>{`
+        @keyframes dropdownIn {
+          from { opacity: 0; transform: scale(0.9) translateY(-5px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes dropdownOut {
+          from { opacity: 1; transform: scale(1) translateY(0); }
+          to { opacity: 0; transform: scale(0.9) translateY(-5px); }
+        }
+      `}</style>
     </>
   );
 }
 
-/* ──────────────────── EmptyState ──────────────────── */
+// ==================== EmptyState ====================
 function EmptyState({ icon, title, desc, action, actionLabel }) {
   return (
     <div style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
@@ -2326,216 +2222,8 @@ function EmptyState({ icon, title, desc, action, actionLabel }) {
   );
 }
 
-/* ──────────────────── ImageModal ──────────────────── */
-function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
-  const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
-
-  useEffect(() => {
-    setCurrentIndex(initialImageIndex);
-  }, [item, initialImageIndex]);
-
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
-
-  if (!isOpen || !item) return null;
-
-  const images = type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || [];
-  const currentImage = images[currentIndex]?.url;
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        background: 'rgba(0,0,0,0.88)',
-        backdropFilter: 'blur(12px)',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: '#12151C',
-          border: '1px solid #222634',
-          borderRadius: 16,
-          overflow: 'hidden',
-          maxWidth: 860,
-          width: '100%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 18px',
-            borderBottom: '1px solid #222634',
-            flexShrink: 0,
-          }}
-        >
-          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item.title}</h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: '#171B24',
-              border: '1px solid #222634',
-              borderRadius: 8,
-              padding: '6px 8px',
-              cursor: 'pointer',
-              color: '#9CA3AF',
-              display: 'flex',
-              lineHeight: 0,
-            }}
-          >
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <div
-            style={{
-              background: '#0B0D12',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem',
-              minHeight: 260,
-            }}
-          >
-            <img
-              src={currentImage}
-              alt={item.title}
-              style={{ maxHeight: '50vh', maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
-            />
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={() => setCurrentIndex((p) => (p - 1 + images.length) % images.length)}
-                  style={{
-                    position: 'absolute',
-                    left: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid #222634',
-                    borderRadius: 8,
-                    padding: '8px',
-                    cursor: 'pointer',
-                    color: '#E5E7EB',
-                    lineHeight: 0,
-                  }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setCurrentIndex((p) => (p + 1) % images.length)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid #222634',
-                    borderRadius: 8,
-                    padding: '8px',
-                    cursor: 'pointer',
-                    color: '#E5E7EB',
-                    lineHeight: 0,
-                  }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 14,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    gap: 6,
-                  }}
-                >
-                  {images.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentIndex(idx)}
-                      style={{
-                        width: idx === currentIndex ? 18 : 6,
-                        height: 6,
-                        borderRadius: 999,
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        background: idx === currentIndex ? '#7C5CFF' : 'rgba(255,255,255,0.2)',
-                      }}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
-            {type === 'certificate' && item.issuedBy && (
-              <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
-                Issued by {item.issuedBy}
-              </p>
-            )}
-            {item.semester && (
-              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
-                Semester {item.semester}
-              </p>
-            )}
-            <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
-              {item.description}
-            </p>
-            {type === 'project' && item.techStack?.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {item.techStack.map((tech, i) => (
-                  <span key={i} className="tech-chip">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            )}
-            {type === 'certificate' && item.tags?.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {item.tags.map((tag, i) => (
-                  <span key={i} className="tag-chip" style={{ fontSize: 11 }}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ──────────────────── EditModal (shared) ──────────────────── */
-function EditModal({ isOpen, onClose, item, type, onSave }) {
+// ==================== EditModal (with closing animation) ====================
+function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
   const [formData, setFormData] = useState({
     title: item?.title || '',
     description: item?.description || '',
@@ -2547,6 +2235,7 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -2578,6 +2267,14 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
     setPreviewUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 200);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
@@ -2604,18 +2301,18 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
       const data = await response.json();
       if (data.success) {
         onSave(data.post);
-        onClose();
+        handleClose();
       } else {
-        alert('Update failed: ' + (data.error || 'Unknown error'));
+        showAlert('Update failed: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch {
-      alert('Network error');
+      showAlert('Network error', 'error');
     } finally {
       setUploading(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isClosing) return null;
 
   return (
     <div
@@ -2628,6 +2325,7 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
+        animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
       }}
     >
       <div
@@ -2640,6 +2338,7 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
           maxHeight: '90vh',
           overflow: 'auto',
           padding: '1.5rem',
+          animation: isClosing ? 'slideOut 0.2s ease-out forwards' : 'slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -2647,7 +2346,7 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
             Edit {type === 'certificate' ? 'Certificate' : 'Project'}
           </h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 20 }}
           >
             ✕
@@ -2882,12 +2581,605 @@ function EditModal({ isOpen, onClose, item, type, onSave }) {
             >
               {uploading ? 'Saving...' : 'Save Changes'}
             </button>
-            <button type="button" onClick={onClose} className="action-btn-ghost">
+            <button type="button" onClick={handleClose} className="action-btn-ghost">
               Cancel
             </button>
           </div>
         </form>
       </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ==================== Main ProfilePage ====================
+export default function ProfilePage() {
+  const params = useParams();
+  const router = useRouter();
+  const regNo = params?.regNo || '';
+
+  const [user, setUser] = useState(null);
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('certificates');
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ bio: '', interests: '' });
+  const { showAlert, AlertComponent } = useCustomAlert();
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        setLoggedInUser(parsed);
+      } catch (err) {
+        console.error('Error parsing user data:', err);
+      }
+    }
+    if (regNo && regNo !== 'undefined') {
+      fetchUserProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [regNo]);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/users/${regNo}`);
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUser(data.user);
+        setEditData({
+          bio: data.user.profile?.bio || '',
+          interests: data.user.profile?.interests?.join(', ') || '',
+        });
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        showAlert('Please log in first', 'error');
+        return;
+      }
+      const loggedInUserData = JSON.parse(userData);
+      const response = await fetch(`/api/users/${regNo}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: loggedInUserData._id,
+          role: loggedInUserData.role,
+          updates: {
+            profile: {
+              bio: editData.bio,
+              interests: editData.interests
+                .split(',')
+                .map((i) => i.trim())
+                .filter((i) => i),
+            },
+          },
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUser(data.user);
+        setIsEditing(false);
+        showAlert('Profile updated!', 'success');
+      } else {
+        showAlert('Failed to update: ' + (data.error || 'Unknown error'), 'error');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      showAlert('Error updating profile', 'error');
+    }
+  };
+
+  const handleCancel = () => {
+    if (user) {
+      setEditData({
+        bio: user.profile?.bio || '',
+        interests: user.profile?.interests?.join(', ') || '',
+      });
+    }
+    setIsEditing(false);
+  };
+
+  const isOwnProfile =
+    loggedInUser &&
+    user &&
+    (loggedInUser._id === user._id ||
+      loggedInUser.registerNumber === user.registerNumber);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#0B0D12',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              border: '2px solid #222634',
+              borderTopColor: '#7C5CFF',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto',
+            }}
+          />
+          <p
+            style={{
+              marginTop: 16,
+              color: '#6B7280',
+              fontSize: 14,
+              letterSpacing: '0.05em',
+            }}
+          >
+            Loading profile
+          </p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#0B0D12',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+        }}
+      >
+        <div
+          style={{
+            background: '#12151C',
+            border: '1px solid #222634',
+            borderRadius: 16,
+            padding: '2.5rem',
+            maxWidth: 420,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'rgba(239,68,68,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+            }}
+          >
+            <svg
+              width="28"
+              height="28"
+              fill="none"
+              stroke="#EF4444"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.5"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+          <h3
+            style={{
+              color: '#E5E7EB',
+              fontSize: 18,
+              fontWeight: 600,
+              marginBottom: 8,
+            }}
+          >
+            User Not Found
+          </h3>
+          <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 24 }}>
+            No user found with register number{' '}
+            <code
+              style={{
+                background: '#171B24',
+                padding: '2px 8px',
+                borderRadius: 4,
+                color: '#9CA3AF',
+              }}
+            >
+              {regNo}
+            </code>
+          </p>
+          <button
+            onClick={() => router.push('/feed')}
+            style={{
+              width: '100%',
+              background: '#7C5CFF',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 0',
+              fontWeight: 500,
+              cursor: 'pointer',
+              marginBottom: 8,
+              fontSize: 14,
+            }}
+          >
+            Back to Feed
+          </button>
+          <button
+            onClick={fetchUserProfile}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              color: '#9CA3AF',
+              border: '1px solid #222634',
+              borderRadius: 8,
+              padding: '10px 0',
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontSize: 14,
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0B0D12' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+        .profile-input {
+          width: 100%; background: #0B0D12; border: 1px solid #222634;
+          border-radius: 8px; padding: 10px 14px; color: #E5E7EB;
+          font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box;
+          font-family: inherit;
+        }
+        .profile-input:focus { border-color: #7C5CFF; }
+        .profile-input::placeholder { color: #6B7280; }
+        .tab-btn {
+          background: none; border: none; cursor: pointer; font-size: 12px;
+          font-weight: 500; letter-spacing: 0.08em; padding: 14px 20px;
+          transition: color 0.2s; position: relative; text-transform: uppercase;
+          font-family: inherit;
+        }
+        .tab-btn.active { color: #E5E7EB; }
+        .tab-btn.inactive { color: #6B7280; }
+        .tab-btn.inactive:hover { color: #9CA3AF; }
+        .tab-btn.active::after {
+          content: ''; position: absolute; bottom: 0; left: 20px; right: 20px;
+          height: 2px; background: #7C5CFF; border-radius: 2px;
+        }
+        .action-btn-primary {
+          background: #7C5CFF; color: #fff; border: none; border-radius: 8px;
+          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: background 0.2s; letter-spacing: 0.02em; font-family: inherit;
+        }
+        .action-btn-primary:hover { background: #6d4fe0; }
+        .action-btn-ghost {
+          background: transparent; color: #9CA3AF; border: 1px solid #222634; border-radius: 8px;
+          padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: all 0.2s; letter-spacing: 0.02em; font-family: inherit;
+        }
+        .action-btn-ghost:hover { border-color: #9CA3AF; color: #E5E7EB; }
+        .profile-card { background: #12151C; border: 1px solid #222634; border-radius: 16px; animation: fadeUp 0.4s ease; }
+        .tag-chip {
+          display: inline-block; background: #171B24; border: 1px solid #222634;
+          color: #9CA3AF; padding: 3px 10px; border-radius: 999px; font-size: 12px;
+          letter-spacing: 0.02em;
+        }
+        .skill-chip {
+          display: inline-block; background: rgba(124,92,255,0.1); border: 1px solid rgba(124,92,255,0.2);
+          color: #a78bfa; padding: 4px 12px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;
+        }
+        .tech-chip {
+          display: inline-block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15);
+          color: #4ade80; padding: 4px 10px; border-radius: 6px; font-size: 12px;
+        }
+        .delete-btn { background: none; border: none; cursor: pointer; color: #6B7280; font-size: 13px; transition: color 0.2s; font-family: inherit; padding: 4px; }
+        .delete-btn:hover { color: #EF4444; }
+        .cert-card {
+          background: #171B24; border: 1px solid #222634; border-radius: 12px; padding: 18px;
+          transition: border-color 0.2s;
+        }
+        .cert-card:hover { border-color: #2d3148; }
+        .section-label {
+          color: #6B7280; font-size: 11px; text-transform: uppercase;
+          letter-spacing: 0.08em; margin-bottom: 10px; display: block;
+        }
+        @media (max-width: 1024px) {
+          .profile-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 640px) {
+          .tab-btn { padding: 12px 12px; font-size: 10px; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
+        <div
+          className="profile-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '290px 1fr',
+            gap: '1.5rem',
+            alignItems: 'start',
+          }}
+        >
+          {/* LEFT COLUMN */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="profile-card" style={{ padding: '1.75rem 1.5rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: '50%',
+                    margin: '0 auto 14px',
+                    background:
+                      'linear-gradient(135deg, rgba(124,92,255,0.25), rgba(124,92,255,0.05))',
+                    border: '1px solid rgba(124,92,255,0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 28,
+                      fontWeight: 700,
+                      color: '#7C5CFF',
+                    }}
+                  >
+                    {user.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <h1
+                  style={{
+                    color: '#E5E7EB',
+                    fontSize: 18,
+                    fontWeight: 700,
+                    margin: '0 0 4px',
+                  }}
+                >
+                  {user.name || 'Unknown'}
+                </h1>
+                <p
+                  style={{
+                    color: '#6B7280',
+                    fontSize: 12,
+                    margin: '0 0 10px',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  {user.registerNumber || user.staffId}
+                </p>
+                {user.department && (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      background: 'rgba(124,92,255,0.1)',
+                      border: '1px solid rgba(124,92,255,0.2)',
+                      color: '#a78bfa',
+                      padding: '3px 12px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {user.department}
+                  </span>
+                )}
+                {user.batchYear && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: '#171B24',
+                      border: '1px solid #222634',
+                      borderRadius: 8,
+                      padding: '5px 14px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: '#6B7280',
+                        fontSize: 11,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Batch
+                    </span>
+                    <span style={{ color: '#E5E7EB', fontSize: 12, fontWeight: 600 }}>
+                      {user.batchYear}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, background: '#222634', marginBottom: '1.25rem' }} />
+
+              <div style={{ marginBottom: 16 }}>
+                <span className="section-label">About</span>
+                {isEditing ? (
+                  <textarea
+                    value={editData.bio}
+                    onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                    className="profile-input"
+                    rows={3}
+                    placeholder="Write about yourself..."
+                    style={{ resize: 'vertical' }}
+                  />
+                ) : (
+                  <p
+                    style={{
+                      color: user.profile?.bio ? '#9CA3AF' : '#6B7280',
+                      fontSize: 13,
+                      lineHeight: 1.7,
+                      margin: 0,
+                    }}
+                  >
+                    {user.profile?.bio || 'No bio yet.'}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <span className="section-label">Interests</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editData.interests}
+                    onChange={(e) =>
+                      setEditData({ ...editData, interests: e.target.value })
+                    }
+                    className="profile-input"
+                    placeholder="Design, AI, Web Dev..."
+                  />
+                ) : user.profile?.interests?.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {user.profile.interests.map((interest, index) => (
+                      <span key={index} className="tag-chip">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>
+                    No interests yet.
+                  </p>
+                )}
+              </div>
+
+              {isOwnProfile && (
+                <>
+                  <div
+                    style={{ height: 1, background: '#222634', marginBottom: '1rem' }}
+                  />
+                  {isEditing ? (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={handleSave} className="action-btn-primary" style={{ flex: 1 }}>
+                        Save
+                      </button>
+                      <button onClick={handleCancel} className="action-btn-ghost" style={{ flex: 1 }}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="action-btn-ghost"
+                      style={{ width: '100%' }}
+                    >
+                      Edit Profile
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="profile-card" style={{ overflow: 'hidden' }}>
+            <div style={{ borderBottom: '1px solid #222634', display: 'flex' }}>
+              {[
+                { id: 'certificates', label: 'Certificates' },
+                { id: 'projects', label: 'Projects' },
+                { id: 'resume', label: 'Resume' },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`tab-btn ${activeTab === id ? 'active' : 'inactive'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{ padding: '1.75rem' }}>
+              {activeTab === 'certificates' && (
+                <CertificateSection userId={user._id} isOwnProfile={isOwnProfile} showAlert={showAlert} />
+              )}
+              {activeTab === 'projects' && (
+                <ProjectSection userId={user._id} isOwnProfile={isOwnProfile} showAlert={showAlert} />
+              )}
+              {activeTab === 'resume' && (
+                <ResumeSection
+                  user={user}
+                  isOwnProfile={isOwnProfile}
+                  regNo={regNo}
+                  onUpdate={setUser}
+                  showAlert={showAlert}
+                  loggedInUser={loggedInUser}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      {AlertComponent}
     </div>
   );
 }

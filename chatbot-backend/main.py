@@ -12,9 +12,16 @@ load_dotenv(Path(__file__).parent / ".env")
 
 app = FastAPI(title="Campus Chatbot API", version="1.0.0")
 
+frontend_url = os.getenv("FRONTEND_URL")
+
+origins = [
+    "http://localhost:3000",
+    frontend_url
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin for origin in origins if origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

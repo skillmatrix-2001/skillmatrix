@@ -1,250 +1,276 @@
 "use client";
 
 import { useState } from "react";
+import { asBlob } from "html-docx-js/dist/html-docx";
 
 export default function ResumeButton({ regNo }) {
-  const [open, setOpen]       = useState(false);
-  const [format, setFormat]   = useState("pdf");
+  const [open, setOpen] = useState(false);
+  const [format, setFormat] = useState("pdf");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus]   = useState(null);
+  const [status, setStatus] = useState(null);
+  const [isClosing, setIsClosing] = useState(false);
 
-  async function fetchProfileData() {
-    const res = await fetch(`/api/users/${regNo}`);
-    if (!res.ok) throw new Error("Failed to fetch profile");
-    const json = await res.json();
-    if (!json.success) throw new Error("Profile not found");
-    return json.user;
+  async function fetchFullData() {
+    const userRes = await fetch(`/api/users/${regNo}`);
+    if (!userRes.ok) throw new Error("Failed to fetch profile");
+    const userJson = await userRes.json();
+    if (!userJson.success) throw new Error("Profile not found");
+    const user = userJson.user;
+
+    const postsRes = await fetch(`/api/posts?userId=${user._id}`);
+    if (!postsRes.ok) throw new Error("Failed to fetch posts");
+    const postsJson = await postsRes.json();
+    const posts = postsJson.success ? postsJson.posts : [];
+
+    const certificates = posts.filter(p => p.type === "certificate");
+    const projects = posts.filter(p => p.type === "project");
+
+    return { user, certificates, projects };
   }
 
-  // ── PDF: build HTML resume → open print window → user saves as PDF ──
-  async function downloadPDF() {
-    const user = await fetchProfileData();
-    const p    = user.profile || {};
-    const safe = (v) => (v ? String(v) : "—");
-    const arr  = (a) => (Array.isArray(a) && a.length > 0 ? a : null);
+  const escapeHtml = (str) => {
+    if (!str) return "";
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === "&") return "&amp;";
+      if (m === "<") return "&lt;";
+      if (m === ">") return "&gt;";
+      return m;
+    }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+      return c;
+    });
+  };
 
-    const skillsList = arr(p.skills)
-      ? p.skills.map(s => `<span class="tag">${s}</span>`).join("")
-      : "<span>—</span>";
+  async function generateResumeHTML() {
+    const { user, certificates, projects } = await fetchFullData();
+    const p = user.profile || {};
 
-    const interestsList = arr(p.interests)
-      ? p.interests.map(s => `<span class="tag">${s}</span>`).join("")
-      : "<span>—</span>";
+    const formatArray = (arr) => arr && arr.length ? arr.join(", ") : "—";
 
-    const educationHTML = arr(p.education)
-      ? p.education.map(e => `
-          <div class="entry">
-            <div class="entry-title">${safe(e.degree)}</div>
-            <div class="entry-sub">${safe(e.institution)}${e.year ? " · " + e.year : ""}</div>
-          </div>`).join("")
-      : "<p>—</p>";
+    const summaryText = p.summary || p.bio || "—";
 
-    const experienceHTML = arr(p.experience)
-      ? p.experience.map(e => `
-          <div class="entry">
-            <div class="entry-title">${safe(e.role)} — ${safe(e.company)}</div>
-            <div class="entry-sub">${safe(e.duration)}</div>
-            ${e.description ? `<div class="entry-desc">${safe(e.description)}</div>` : ""}
-          </div>`).join("")
-      : "<p>—</p>";
+    // Contact: email and phone as plain text, links as clickable <a>
+    let contactItems = [];
+    if (user.email) contactItems.push(`Email: ${escapeHtml(user.email)}`);
+    if (user.phone) contactItems.push(`Phone: ${escapeHtml(user.phone)}`);
+    if (p.linkedin) contactItems.push(`LinkedIn: <a href="${escapeHtml(p.linkedin)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.linkedin)}</a>`);
+    if (p.github) contactItems.push(`GitHub: <a href="${escapeHtml(p.github)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.github)}</a>`);
+    if (p.portfolio) contactItems.push(`Portfolio: <a href="${escapeHtml(p.portfolio)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.portfolio)}</a>`);
+    const contactText = contactItems.length ? contactItems.join("  |  ") : "—";
 
-    const projectsHTML = arr(p.projects)
-      ? p.projects.map(proj => `
-          <div class="entry">
-            <div class="entry-title">${safe(proj.title)}</div>
-            ${proj.techStack?.length ? `<div class="entry-sub">${proj.techStack.join(", ")}</div>` : ""}
-            ${proj.description ? `<div class="entry-desc">${safe(proj.description)}</div>` : ""}
-          </div>`).join("")
-      : "<p>—</p>";
+    const skillsText = formatArray(p.skills);
 
-    const contactRows = [
-      user.email    && `<tr><td class="label">Email</td><td>${user.email}</td></tr>`,
-      user.phone    && `<tr><td class="label">Phone</td><td>${user.phone}</td></tr>`,
-      p.linkedin    && `<tr><td class="label">LinkedIn</td><td>${p.linkedin}</td></tr>`,
-      p.github      && `<tr><td class="label">GitHub</td><td>${p.github}</td></tr>`,
-      p.portfolio   && `<tr><td class="label">Portfolio</td><td>${p.portfolio}</td></tr>`,
-    ].filter(Boolean).join("") || "<tr><td>—</td></tr>";
+    const educationItems = p.education && p.education.length
+      ? p.education.map(e => `${escapeHtml(e.degree)} – ${escapeHtml(e.institution)}${e.year ? " (" + e.year + ")" : ""}`).join("\n")
+      : "—";
 
-    const html = `<!DOCTYPE html>
+    const experienceItems = p.experience && p.experience.length
+      ? p.experience.map(e => {
+          let line = `${escapeHtml(e.role)} at ${escapeHtml(e.company)}`;
+          if (e.duration) line += ` (${escapeHtml(e.duration)})`;
+          if (e.description) line += `\n   ${escapeHtml(e.description)}`;
+          return line;
+        }).join("\n\n")
+      : "—";
+
+    const certItems = certificates.length
+      ? certificates.map(cert => {
+          let line = `• ${escapeHtml(cert.title)}`;
+          if (cert.description) line += `\n  ${escapeHtml(cert.description)}`;
+          return line;
+        }).join("\n\n")
+      : "—";
+
+    const projectItems = projects.length
+      ? projects.map(proj => {
+          let line = `• ${escapeHtml(proj.title)}`;
+          if (proj.techStack && proj.techStack.length)
+            line += `\n  Technologies: ${proj.techStack.map(t => escapeHtml(t)).join(", ")}`;
+          if (proj.description) line += `\n  ${escapeHtml(proj.description)}`;
+          return line;
+        }).join("\n\n")
+      : "—";
+
+    const interestsText = formatArray(p.interests);
+
+    // Footer with current date
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const footerText = `Generated with SkillMatrix on ${formattedDate}`;
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Resume – ${user.name || regNo}</title>
+  <title>Resume – ${escapeHtml(user.name) || regNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      font-size: 11px;
-      color: #222;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.4;
+      color: #000;
       background: #fff;
-    }
-
-    /* ── TOP BAR ── */
-    .header {
-      background: #595959;
-      padding: 0;
-      margin-bottom: 0;
-    }
-    .name-box {
-      background: #fff;
-      margin: 0 80px;
-      padding: 12px 20px;
-      border: 1px solid #bbb;
-      text-align: center;
+      padding: 0.75in;
       position: relative;
-      top: -30px;
-      margin-bottom: -18px;
+      min-height: 100%;
     }
-    .header-spacer { height: 50px; }
-    .name-box h1  { font-size: 22px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-    .name-box h2  { font-size: 11px; color: #777; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
 
-    /* ── LAYOUT ── */
-    .body { padding: 10px 30px 30px; }
+    h1 {
+      font-size: 24pt;
+      font-weight: bold;
+      margin-bottom: 12pt;
+      letter-spacing: 1px;
+    }
+
+    .section {
+      margin-top: 16pt;
+    }
 
     .section-title {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin: 14px 0 3px;
-      padding-bottom: 2px;
-      border-bottom: 0.5px solid #999;
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 8pt;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 2pt;
     }
 
-    .two-col { display: flex; gap: 24px; margin-top: 10px; }
-    .col-left  { flex: 0 0 44%; }
-    .col-right { flex: 1; }
+    .contact-line {
+      font-size: 10pt;
+      margin-bottom: 12pt;
+      color: #000;
+    }
 
-    .summary { font-size: 10px; line-height: 1.6; color: #444; text-align: justify; margin-bottom: 4px; }
+    .contact-line a {
+      color: #000;
+      text-decoration: underline;
+    }
 
-    /* contact table */
-    table { width: 100%; border-collapse: collapse; }
-    td { padding: 2px 4px; font-size: 10px; vertical-align: top; }
-    td.label { font-weight: 700; white-space: nowrap; width: 70px; color: #444; }
+    .entry {
+      margin-bottom: 12pt;
+    }
 
-    /* skills/interests tags */
-    .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .tag  { background: #f0f0f0; padding: 2px 7px; border-radius: 3px; font-size: 9px; }
+    .entry-title {
+      font-weight: bold;
+      font-size: 12pt;
+    }
 
-    /* entries */
-    .entry        { margin-bottom: 8px; }
-    .entry-title  { font-weight: 700; font-size: 10px; }
-    .entry-sub    { color: #777; font-size: 9px; margin-top: 1px; }
-    .entry-desc   { font-size: 9px; color: #444; margin-top: 2px; line-height: 1.4; }
+    .entry-sub {
+      font-style: italic;
+      font-size: 11pt;
+      margin-bottom: 2pt;
+    }
 
-    /* ── PRINT RULES ── */
+    .entry-desc {
+      font-size: 11pt;
+      margin-left: 12pt;
+      white-space: pre-line;
+    }
+
+    .footer {
+      margin-top: 30pt;
+      text-align: center;
+      font-size: 9pt;
+      color: #555;
+      border-top: 0.5px solid #ccc;
+      padding-top: 8pt;
+    }
+
     @media print {
-      @page { size: A4; margin: 0; }
-      body  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .no-print { display: none !important; }
+      body { padding: 0.5in; }
+      .contact-line a { text-decoration: underline; }
+      .footer { position: fixed; bottom: 0; left: 0; right: 0; }
     }
-
-    /* ── PRINT BUTTON (hidden when printing) ── */
-    .print-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: #1d4ed8;
-      color: #fff;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 13px;
-      z-index: 999;
-    }
-    .print-bar button {
-      background: #fff;
-      color: #1d4ed8;
-      border: none;
-      padding: 6px 18px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    body { padding-top: 48px; }
   </style>
 </head>
 <body>
 
-  <div class="print-bar no-print">
-    <span>📄 Your resume is ready — click <strong>Save as PDF</strong> to download</span>
-    <button onclick="window.print()">🖨️ Save as PDF</button>
+  <h1>${escapeHtml(user.name) || "YOUR NAME"}</h1>
+
+  <div class="contact-line">${contactText}</div>
+
+  <div class="section">
+    <div class="section-title">SUMMARY</div>
+    <p>${escapeHtml(summaryText)}</p>
   </div>
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-spacer"></div>
-  </div>
-  <div class="name-box">
-    <h1>${user.name || "YOUR NAME"}</h1>
-    <h2>${p.designation || "YOUR ROLE"}</h2>
+  <div class="section">
+    <div class="section-title">SKILLS</div>
+    <p>${escapeHtml(skillsText)}</p>
   </div>
 
-  <div class="body">
-
-    <!-- Summary -->
-    <div class="section-title">Summary</div>
-    <p class="summary">${safe(p.summary || p.bio)}</p>
-
-    <div class="two-col">
-
-      <!-- LEFT -->
-      <div class="col-left">
-
-        <div class="section-title">Contact</div>
-        <table>${contactRows}</table>
-
-        <div class="section-title">Skills</div>
-        <div class="tags">${skillsList}</div>
-
-        <div class="section-title">Education</div>
-        ${educationHTML}
-
-        <div class="section-title">Interests</div>
-        <div class="tags">${interestsList}</div>
-
-      </div>
-
-      <!-- RIGHT -->
-      <div class="col-right">
-
-        <div class="section-title">Experience</div>
-        ${experienceHTML}
-
-        <div class="section-title">Projects</div>
-        ${projectsHTML}
-
-      </div>
-    </div>
-
+  <div class="section">
+    <div class="section-title">EDUCATION</div>
+    <div style="white-space: pre-line;">${educationItems}</div>
   </div>
+
+  <div class="section">
+    <div class="section-title">EXPERIENCE</div>
+    <div style="white-space: pre-line;">${experienceItems}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">CERTIFICATIONS</div>
+    <div style="white-space: pre-line;">${certItems}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">PROJECTS</div>
+    <div style="white-space: pre-line;">${projectItems}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">INTERESTS</div>
+    <p>${escapeHtml(interestsText)}</p>
+  </div>
+
+  <div class="footer">${footerText}</div>
+
 </body>
 </html>`;
+  }
 
-    // Open in a new window — browser handles print → Save as PDF
+  async function downloadPDF() {
+    const html = await generateResumeHTML();
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) throw new Error("Popup blocked — please allow popups for this site");
     win.document.write(html);
     win.document.close();
-    // Auto-trigger print after page renders
     win.onload = () => win.print();
   }
 
-  // ── DOCX: API route — unchanged, works perfectly ───────────────────
   async function downloadDOCX() {
-    const res = await fetch("/api/resume", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ regNo, format: "docx" }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "DOCX generation failed");
-    }
-    return await res.blob();
+    const html = await generateResumeHTML();
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const bodyContent = bodyMatch ? bodyMatch[1] : html;
+    const fullHtml = `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Resume</title>
+      <style>
+        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; margin: 0.75in; line-height: 1.4; }
+        .section-title { font-size: 14pt; font-weight: bold; margin-top: 16pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; }
+        .contact-line { margin-bottom: 12pt; }
+        .contact-line a { color: #000; text-decoration: underline; }
+        .entry { margin-bottom: 12pt; }
+        .entry-title { font-weight: bold; }
+        .entry-sub { font-style: italic; margin-bottom: 2pt; }
+        .entry-desc { margin-left: 12pt; white-space: pre-line; }
+        .footer { margin-top: 30pt; text-align: center; font-size: 9pt; color: #555; border-top: 0.5px solid #ccc; padding-top: 8pt; }
+      </style>
+    </head>
+    <body>${bodyContent}</body>
+    </html>`;
+    const blob = asBlob(fullHtml);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resume_${regNo}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   async function handleGenerate() {
@@ -257,15 +283,7 @@ export default function ResumeButton({ regNo }) {
         await downloadPDF();
         setStatus({ type: "success", msg: "Resume opened! Click 'Save as PDF' in the new tab." });
       } else {
-        const blob = await downloadDOCX();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href     = url;
-        a.download = `resume_${regNo}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        await downloadDOCX();
         setStatus({ type: "success", msg: "Resume downloaded!" });
       }
     } catch (err) {
@@ -276,16 +294,184 @@ export default function ResumeButton({ regNo }) {
     }
   }
 
-  function handleClose() {
-    setOpen(false);
-    setStatus(null);
-    setLoading(false);
-  }
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setStatus(null);
+      setLoading(false);
+      setIsClosing(false);
+    }, 200);
+  };
 
   const formatOptions = [
     { id: "pdf",  icon: "📕", label: "PDF",          hint: "Best for sharing" },
     { id: "docx", icon: "📘", label: "Word (.docx)", hint: "Best for editing" },
   ];
+
+  const theme = {
+    bg: "#0B0D12",
+    cardBg: "#12151C",
+    border: "#222634",
+    text: "#E5E7EB",
+    textMuted: "#6B7280",
+    accent: "#7C5CFF",
+    accentHover: "#6d4fe0",
+    errorBg: "rgba(239,68,68,0.1)",
+    errorBorder: "rgba(239,68,68,0.3)",
+    errorText: "#F87171",
+    successBg: "rgba(16,185,129,0.1)",
+    successBorder: "rgba(16,185,129,0.3)",
+    successText: "#10B981",
+  };
+
+  const styles = {
+    triggerBtn: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      background: theme.accent,
+      color: "#fff",
+      border: "none",
+      padding: "9px 18px",
+      borderRadius: 8,
+      fontSize: 13,
+      fontWeight: 500,
+      cursor: "pointer",
+      transition: "background 0.2s",
+    },
+    overlay: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      backdropFilter: "blur(4px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999,
+      animation: isClosing ? "fadeOut 0.2s ease-out forwards" : "fadeIn 0.2s ease-out",
+    },
+    modal: {
+      background: theme.cardBg,
+      border: `1px solid ${theme.border}`,
+      borderRadius: 16,
+      padding: "1.75rem",
+      width: 420,
+      maxWidth: "90vw",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+      animation: isClosing ? "slideOut 0.2s ease-out forwards" : "slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)",
+    },
+    header: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    title: {
+      margin: 0,
+      fontSize: 20,
+      fontWeight: 700,
+      color: theme.text,
+    },
+    closeBtn: {
+      background: "none",
+      border: "none",
+      fontSize: 20,
+      cursor: "pointer",
+      color: theme.textMuted,
+      padding: "4px 8px",
+      borderRadius: 6,
+      transition: "color 0.2s",
+    },
+    subtitle: {
+      color: theme.textMuted,
+      fontSize: 13,
+      margin: "0 0 24px",
+    },
+    formatRow: {
+      display: "flex",
+      gap: 12,
+      marginBottom: 20,
+    },
+    formatCard: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      borderWidth: 2,
+      borderStyle: "solid",
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: "14px 8px",
+      cursor: "pointer",
+      textAlign: "center",
+      userSelect: "none",
+      background: "transparent",
+      transition: "all 0.2s",
+    },
+    formatCardActive: {
+      borderColor: theme.accent,
+      background: "rgba(124,92,255,0.1)",
+    },
+    formatLabel: {
+      fontWeight: 600,
+      fontSize: 14,
+      color: theme.text,
+      marginTop: 8,
+    },
+    formatHint: {
+      fontSize: 11,
+      color: theme.textMuted,
+      marginTop: 2,
+    },
+    status: {
+      padding: "10px 14px",
+      borderRadius: 8,
+      fontSize: 13,
+      marginBottom: 20,
+    },
+    statusSuccess: {
+      background: theme.successBg,
+      border: `1px solid ${theme.successBorder}`,
+      color: theme.successText,
+    },
+    statusError: {
+      background: theme.errorBg,
+      border: `1px solid ${theme.errorBorder}`,
+      color: theme.errorText,
+    },
+    actions: {
+      display: "flex",
+      gap: 12,
+      justifyContent: "flex-end",
+    },
+    cancelBtn: {
+      background: "transparent",
+      border: `1px solid ${theme.border}`,
+      borderRadius: 8,
+      padding: "9px 18px",
+      color: theme.textMuted,
+      fontSize: 13,
+      fontWeight: 500,
+      cursor: "pointer",
+      transition: "all 0.2s",
+    },
+    generateBtn: {
+      background: theme.accent,
+      color: "#fff",
+      border: "none",
+      borderRadius: 8,
+      padding: "9px 20px",
+      fontSize: 13,
+      fontWeight: 500,
+      cursor: "pointer",
+      transition: "background 0.2s",
+    },
+    generateBtnDisabled: {
+      background: "rgba(124,92,255,0.5)",
+      cursor: "not-allowed",
+    },
+  };
 
   return (
     <>
@@ -332,28 +518,25 @@ export default function ResumeButton({ regNo }) {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
     </>
   );
 }
-
-const styles = {
-  triggerBtn:          { display: "inline-flex", alignItems: "center", gap: 8, background: "#2563eb", color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: "pointer" },
-  overlay:             { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 },
-  modal:               { background: "#fff", borderRadius: 14, padding: 32, width: 420, maxWidth: "90vw", boxShadow: "0 20px 60px rgba(0,0,0,0.18)" },
-  header:              { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  title:               { margin: 0, fontSize: 20, fontWeight: 700, color: "#111" },
-  closeBtn:            { background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#888", padding: "4px 8px", borderRadius: 6 },
-  subtitle:            { color: "#6b7280", fontSize: 14, margin: "0 0 20px" },
-  formatRow:           { display: "flex", gap: 12, marginBottom: 20 },
-  formatCard:          { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", borderWidth: 2, borderStyle: "solid", borderColor: "#e5e7eb", borderRadius: 10, padding: "14px 8px", cursor: "pointer", textAlign: "center", userSelect: "none" },
-  formatCardActive:    { borderColor: "#2563eb", background: "#eff6ff" },
-  formatLabel:         { fontWeight: 700, fontSize: 14, color: "#111", marginTop: 6 },
-  formatHint:          { fontSize: 11, color: "#9ca3af", marginTop: 2 },
-  status:              { padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 },
-  statusSuccess:       { background: "#dcfce7", color: "#166534" },
-  statusError:         { background: "#fee2e2", color: "#991b1b" },
-  actions:             { display: "flex", gap: 10, justifyContent: "flex-end" },
-  cancelBtn:           { padding: "9px 18px", borderRadius: 7, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 14, cursor: "pointer" },
-  generateBtn:         { padding: "9px 20px", borderRadius: 7, background: "#2563eb", color: "#fff", border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer" },
-  generateBtnDisabled: { background: "#93c5fd", cursor: "not-allowed" },
-};
