@@ -74,12 +74,12 @@ export default function Chatbot({ userContext }) {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(process.env.NEXT_PUBLIC_CHATBOT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updatedMessages,
-          userContext: userContext || null,
+          user_context: userContext || null,
         }),
       });
 
