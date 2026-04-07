@@ -229,6 +229,41 @@ export default function StaffDashboard() {
             width: 100%;
           }
         }
+
+        /* Hover effect for student cards */
+        .student-card {
+          transition: all 0.2s ease;
+        }
+        .student-card:hover {
+          box-shadow: 0 0 0 1px rgba(124,92,255,0.25);
+          background: #161a22 !important;
+        }
+
+        /* Item card styles */
+        .cert-item, .proj-item {
+          background: #0B0D12;
+          border: 1px solid #222634;
+          border-radius: 8px;
+          padding: 12px;
+          transition: all 0.15s;
+        }
+        .cert-item:hover, .proj-item:hover {
+          border-color: #2a3040;
+          background: #10131a;
+        }
+
+        /* Batch year highlight */
+        .batch-highlight {
+          background: rgba(124,92,255,0.12);
+          border: 1px solid rgba(124,92,255,0.25);
+          border-radius: 20px;
+          padding: 4px 12px;
+          font-weight: 600;
+          color: #a78bfa;
+          display: inline-block;
+          font-size: 13px;
+          margin-top: 8px;
+        }
       `}</style>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
@@ -415,113 +450,129 @@ export default function StaffDashboard() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {filteredStudents.map((student) => (
-              <div key={student._id} style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 12, overflow: 'hidden' }}>
-                <div className="staff-card-row">
-                  {/* Left sidebar */}
-                  <div className="staff-card-col" style={{ padding: '1rem', borderRight: '1px solid #222634', background: '#0B0D12' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#171B24', border: '1px solid #222634', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#7C5CFF' }}>
-                        {student.name?.charAt(0).toUpperCase()}
+            {filteredStudents.map((student) => {
+              const certs = student.posts?.filter(p => p.type === 'certificate') || [];
+              const projs = student.posts?.filter(p => p.type === 'project') || [];
+              return (
+                <div
+                  key={student._id}
+                  className="student-card"
+                  onClick={() => handleViewProfile(student.registerNumber)}
+                  style={{
+                    background: '#12151C',
+                    border: '1px solid #222634',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div className="staff-card-row">
+                    {/* Left column: Student details */}
+                    <div className="staff-card-col" style={{ padding: '1.25rem', borderRight: '1px solid #222634', background: 'rgba(124,92,255,0.03)' }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <h3 style={{ color: '#E5E7EB', fontWeight: 700, fontSize: 16, margin: '0 0 4px 0' }}>
+                          {student.name}
+                        </h3>
+                        <p style={{ color: '#9CA3AF', fontSize: 13, fontFamily: 'monospace', margin: '0 0 12px 0' }}>
+                          {student.registerNumber}
+                        </p>
                       </div>
                       <div>
-                        <h3 style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14 }}>{student.name}</h3>
-                        <p style={{ color: '#6B7280', fontSize: 11 }}>{student.registerNumber}</p>
+                        <span className="batch-highlight">
+                          Batch: {student.batchYear || '—'}
+                        </span>
                       </div>
                     </div>
-                    {student.profile?.interests?.length > 0 && (
-                      <div>
-                        <p style={{ color: '#6B7280', fontSize: 10, marginBottom: 6 }}>Interests</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {student.profile.interests.slice(0, 3).map((int, i) => (
-                            <span key={i} style={{ background: '#171B24', border: '1px solid #222634', padding: '2px 8px', borderRadius: 12, fontSize: 10, color: '#9CA3AF' }}>{int}</span>
-                          ))}
-                          {student.profile.interests.length > 3 && (
-                            <span style={{ fontSize: 10, color: '#6B7280' }}>+{student.profile.interests.length - 3}</span>
-                          )}
-                        </div>
+
+                    {/* Middle column: Certificates */}
+                    <div className="staff-card-col" style={{ padding: '1.25rem', borderRight: '1px solid #222634' }}>
+                      <h4 style={{ color: '#6B7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
+                        Certificates ({certs.length})
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {certs.length === 0 ? (
+                          <p style={{ color: '#6B7280', fontSize: 12, fontStyle: 'italic', margin: 0 }}>No certificates</p>
+                        ) : (
+                          certs.slice(0, 3).map((cert) => (
+                            <div key={cert._id} className="cert-item">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                                <span style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 13 }}>{cert.title}</span>
+                                <span style={{
+                                  background: 'rgba(124,92,255,0.1)',
+                                  border: '1px solid rgba(124,92,255,0.2)',
+                                  color: '#a78bfa',
+                                  padding: '2px 8px',
+                                  borderRadius: 12,
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                }}>
+                                  Sem {cert.semester || '—'}
+                                </span>
+                              </div>
+                              {cert.issuedBy && (
+                                <p style={{ color: '#9CA3AF', fontSize: 11, margin: '4px 0 0 0' }}>
+                                  Issued by: {cert.issuedBy}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                        {certs.length > 3 && (
+                          <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>+{certs.length - 3} more</p>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Certificates */}
-                  <div className="staff-card-col" style={{ padding: '1rem', borderRight: '1px solid #222634' }}>
-                    <h4 style={{ color: '#6B7280', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Certificates</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {student.posts?.filter(p => p.type === 'certificate').map((cert) => (
-                        <div key={cert._id} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: 12 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                            <span style={{ color: '#E5E7EB', fontWeight: 500, fontSize: 13 }}>{cert.title}</span>
-                            <span style={{ background: 'rgba(124,92,255,0.1)', border: '1px solid rgba(124,92,255,0.2)', color: '#a78bfa', padding: '2px 6px', borderRadius: 12, fontSize: 10 }}>
-                              Sem {cert.semester || 'N/A'}
-                            </span>
-                          </div>
-                          {cert.issuedBy && <p style={{ color: '#9CA3AF', fontSize: 11, marginTop: 4 }}>Issued by: {cert.issuedBy}</p>}
-                          {cert.tags?.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                              {cert.tags.slice(0, 3).map((tag, idx) => (
-                                <span key={idx} style={{ background: '#171B24', border: '1px solid #222634', padding: '2px 6px', borderRadius: 12, fontSize: 10, color: '#9CA3AF' }}>#{tag}</span>
-                              ))}
-                              {cert.tags.length > 3 && <span style={{ fontSize: 10, color: '#6B7280' }}>+{cert.tags.length - 3}</span>}
+                    {/* Right column: Projects */}
+                    <div className="staff-card-col" style={{ padding: '1.25rem' }}>
+                      <h4 style={{ color: '#6B7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
+                        Projects ({projs.length})
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {projs.length === 0 ? (
+                          <p style={{ color: '#6B7280', fontSize: 12, fontStyle: 'italic', margin: 0 }}>No projects</p>
+                        ) : (
+                          projs.slice(0, 3).map((proj) => (
+                            <div key={proj._id} className="proj-item">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <span style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 13 }}>{proj.title}</span>
+                                <span style={{
+                                  background: 'rgba(34,197,94,0.1)',
+                                  border: '1px solid rgba(34,197,94,0.2)',
+                                  color: '#4ade80',
+                                  padding: '2px 8px',
+                                  borderRadius: 12,
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                }}>
+                                  Sem {proj.semester || '—'}
+                                </span>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                      {(!student.posts || student.posts.filter(p => p.type === 'certificate').length === 0) && (
-                        <p style={{ color: '#6B7280', fontSize: 11, fontStyle: 'italic' }}>No certificates</p>
-                      )}
+                          ))
+                        )}
+                        {projs.length > 3 && (
+                          <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>+{projs.length - 3} more</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Projects */}
-                  <div className="staff-card-col" style={{ padding: '1rem' }}>
-                    <h4 style={{ color: '#6B7280', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Projects</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {student.posts?.filter(p => p.type === 'project').map((proj) => (
-                        <div key={proj._id} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: 12 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                            <span style={{ color: '#E5E7EB', fontWeight: 500, fontSize: 13 }}>{proj.title}</span>
-                            <span style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ade80', padding: '2px 6px', borderRadius: 12, fontSize: 10 }}>
-                              Sem {proj.semester || 'N/A'}
-                            </span>
-                          </div>
-                          {proj.techStack?.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                              {proj.techStack.slice(0, 3).map((tech, idx) => (
-                                <span key={idx} style={{ background: '#171B24', border: '1px solid #222634', padding: '2px 6px', borderRadius: 12, fontSize: 10, color: '#9CA3AF' }}>{tech}</span>
-                              ))}
-                              {proj.techStack.length > 3 && <span style={{ fontSize: 10, color: '#6B7280' }}>+{proj.techStack.length - 3}</span>}
-                            </div>
-                          )}
-                          {proj.tags?.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
-                              {proj.tags.slice(0, 3).map((tag, idx) => (
-                                <span key={idx} style={{ background: '#171B24', border: '1px solid #222634', padding: '2px 6px', borderRadius: 12, fontSize: 10, color: '#9CA3AF' }}>#{tag}</span>
-                              ))}
-                              {proj.tags.length > 3 && <span style={{ fontSize: 10, color: '#6B7280' }}>+{proj.tags.length - 3}</span>}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {(!student.posts || student.posts.filter(p => p.type === 'project').length === 0) && (
-                        <p style={{ color: '#6B7280', fontSize: 11, fontStyle: 'italic' }}>No projects</p>
-                      )}
-                    </div>
+                  {/* Footer hint */}
+                  <div style={{
+                    padding: '0.5rem 1.25rem',
+                    borderTop: '1px solid #222634',
+                    background: '#0B0D12',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}>
+                    <span style={{ color: '#7C5CFF', fontSize: 12, fontWeight: 500 }}>
+                      Click to view full profile →
+                    </span>
                   </div>
                 </div>
-
-                <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #222634', background: '#0B0D12', textAlign: 'right' }}>
-                  <button
-                    onClick={() => handleViewProfile(student.registerNumber)}
-                    style={{ color: '#7C5CFF', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
-                    onMouseOver={(e) => (e.target.style.color = '#9b7cff')}
-                    onMouseOut={(e) => (e.target.style.color = '#7C5CFF')}
-                  >
-                    View Full Profile →
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -540,7 +591,7 @@ export default function StaffDashboard() {
             <li>You see only students from your department: <strong style={{ color: '#E5E7EB' }}>{staffUser.department || 'your department'}</strong></li>
             <li>Search works across names, register numbers, bio, interests, post titles, descriptions, and tags</li>
             <li>Filter by batch year and semester to narrow down achievements</li>
-            <li>Click "View Full Profile" to see the complete student portfolio</li>
+            <li>Click on any student card to view their full profile</li>
           </ul>
         </div>
       </div>

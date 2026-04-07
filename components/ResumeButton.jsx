@@ -35,64 +35,104 @@ export default function ResumeButton({ regNo }) {
       if (m === "<") return "&lt;";
       if (m === ">") return "&gt;";
       return m;
-    }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-      return c;
     });
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  };
+
+  // PDF-optimized HTML (unchanged, uses Flexbox)
   async function generateResumeHTML() {
     const { user, certificates, projects } = await fetchFullData();
     const p = user.profile || {};
 
-    const formatArray = (arr) => arr && arr.length ? arr.join(", ") : "—";
-
     const summaryText = p.summary || p.bio || "—";
 
-    // Contact: email and phone as plain text, links as clickable <a>
-    let contactItems = [];
-    if (user.email) contactItems.push(`Email: ${escapeHtml(user.email)}`);
-    if (user.phone) contactItems.push(`Phone: ${escapeHtml(user.phone)}`);
-    if (p.linkedin) contactItems.push(`LinkedIn: <a href="${escapeHtml(p.linkedin)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.linkedin)}</a>`);
-    if (p.github) contactItems.push(`GitHub: <a href="${escapeHtml(p.github)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.github)}</a>`);
-    if (p.portfolio) contactItems.push(`Portfolio: <a href="${escapeHtml(p.portfolio)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.portfolio)}</a>`);
-    const contactText = contactItems.length ? contactItems.join("  |  ") : "—";
+    let leftContact = [];
+    let rightContact = [];
+    if (user.email) leftContact.push(`<span class="contact-label">Email:</span><span class="contact-value">${escapeHtml(user.email)}</span>`);
+    if (p.github) leftContact.push(`<span class="contact-label">GitHub:</span><span class="contact-value"><a href="${escapeHtml(p.github)}">${escapeHtml(p.github)}</a></span>`);
+    if (user.phone) rightContact.push(`<span class="contact-label">Phone:</span><span class="contact-value">${escapeHtml(user.phone)}</span>`);
+    if (p.linkedin) rightContact.push(`<span class="contact-label">LinkedIn:</span><span class="contact-value"><a href="${escapeHtml(p.linkedin)}">${escapeHtml(p.linkedin)}</a></span>`);
+    if (p.portfolio) {
+      rightContact.push(`<span class="contact-label">Portfolio:</span><span class="contact-value"><a href="${escapeHtml(p.portfolio)}">${escapeHtml(p.portfolio)}</a></span>`);
+    }
 
-    const skillsText = formatArray(p.skills);
+    const contactGrid = `
+      <div class="contact-grid">
+        <div class="contact-left">${leftContact.join("")}</div>
+        <div class="contact-right">${rightContact.join("")}</div>
+      </div>
+    `;
 
-    const educationItems = p.education && p.education.length
-      ? p.education.map(e => `${escapeHtml(e.degree)} – ${escapeHtml(e.institution)}${e.year ? " (" + e.year + ")" : ""}`).join("\n")
-      : "—";
+    const skillsText = (p.skills && p.skills.length) ? escapeHtml(p.skills.join(", ")) : "—";
 
-    const experienceItems = p.experience && p.experience.length
-      ? p.experience.map(e => {
-          let line = `${escapeHtml(e.role)} at ${escapeHtml(e.company)}`;
-          if (e.duration) line += ` (${escapeHtml(e.duration)})`;
-          if (e.description) line += `\n   ${escapeHtml(e.description)}`;
-          return line;
-        }).join("\n\n")
-      : "—";
+    let educationHtml = "—";
+    if (p.education && p.education.length) {
+      educationHtml = p.education.map(e => `
+        <div class="edu-entry">
+          <div class="edu-header">
+            <span class="edu-degree">${escapeHtml(e.degree)}</span>
+            <span class="edu-year">${e.year ? escapeHtml(e.year) : ""}</span>
+          </div>
+          <div class="edu-institution">${escapeHtml(e.institution)}</div>
+        </div>
+      `).join("");
+    }
 
-    const certItems = certificates.length
-      ? certificates.map(cert => {
-          let line = `• ${escapeHtml(cert.title)}`;
-          if (cert.description) line += `\n  ${escapeHtml(cert.description)}`;
-          return line;
-        }).join("\n\n")
-      : "—";
+    let experienceHtml = "—";
+    if (p.experience && p.experience.length) {
+      experienceHtml = p.experience.map(exp => `
+        <div class="exp-entry">
+          <div class="exp-header">
+            <span class="exp-role">${escapeHtml(exp.role)}</span>
+            <span class="exp-duration">${exp.duration ? escapeHtml(exp.duration) : ""}</span>
+          </div>
+          <div class="exp-company">${escapeHtml(exp.company)}</div>
+          ${exp.description ? `<div class="exp-desc">• ${escapeHtml(exp.description)}</div>` : ""}
+        </div>
+      `).join("");
+    }
 
-    const projectItems = projects.length
-      ? projects.map(proj => {
-          let line = `• ${escapeHtml(proj.title)}`;
-          if (proj.techStack && proj.techStack.length)
-            line += `\n  Technologies: ${proj.techStack.map(t => escapeHtml(t)).join(", ")}`;
-          if (proj.description) line += `\n  ${escapeHtml(proj.description)}`;
-          return line;
-        }).join("\n\n")
-      : "—";
+    let certsHtml = "—";
+    if (certificates.length) {
+      certsHtml = certificates.map(cert => {
+        const dateStr = formatDate(cert.date || cert.createdAt);
+        return `
+          <div class="cert-entry">
+            <div class="cert-header">
+              <span class="cert-title">${escapeHtml(cert.title)}</span>
+              <span class="cert-date">${dateStr}</span>
+            </div>
+            ${cert.issuedBy ? `<div class="cert-issued">Issued by: ${escapeHtml(cert.issuedBy)}</div>` : ""}
+            ${cert.description ? `<div class="cert-desc">• ${escapeHtml(cert.description)}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
 
-    const interestsText = formatArray(p.interests);
+    let projectsHtml = "—";
+    if (projects.length) {
+      projectsHtml = projects.map(proj => {
+        const dateStr = formatDate(proj.date || proj.createdAt);
+        return `
+          <div class="proj-entry">
+            <div class="proj-header">
+              <span class="proj-title">${escapeHtml(proj.title)}</span>
+              <span class="proj-date">${dateStr}</span>
+            </div>
+            ${proj.description ? `<div class="proj-desc">• ${escapeHtml(proj.description)}</div>` : ""}
+            ${proj.techStack && proj.techStack.length ? `<div class="proj-tech"><span class="tech-label">Technologies used:</span> ${proj.techStack.map(t => escapeHtml(t)).join(", ")}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
 
-    // Footer with current date
+    const interestsText = (p.interests && p.interests.length) ? escapeHtml(p.interests.join(", ")) : "—";
+
     const today = new Date();
     const formattedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const footerText = `Generated with SkillMatrix on ${formattedDate}`;
@@ -104,127 +144,209 @@ export default function ResumeButton({ regNo }) {
   <title>Resume – ${escapeHtml(user.name) || regNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: 'Times New Roman', Times, serif;
-      font-size: 12pt;
-      line-height: 1.4;
+      font-size: 11pt;
+      line-height: 1.5;
       color: #000;
       background: #fff;
-      padding: 0.75in;
-      position: relative;
-      min-height: 100%;
+      padding: 0.7in;
     }
-
-    h1 {
-      font-size: 24pt;
-      font-weight: bold;
-      margin-bottom: 12pt;
-      letter-spacing: 1px;
-    }
-
-    .section {
-      margin-top: 16pt;
-    }
-
-    .section-title {
-      font-size: 14pt;
-      font-weight: bold;
-      margin-bottom: 8pt;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 2pt;
-    }
-
-    .contact-line {
-      font-size: 10pt;
-      margin-bottom: 12pt;
-      color: #000;
-    }
-
-    .contact-line a {
-      color: #000;
-      text-decoration: underline;
-    }
-
-    .entry {
-      margin-bottom: 12pt;
-    }
-
-    .entry-title {
-      font-weight: bold;
-      font-size: 12pt;
-    }
-
-    .entry-sub {
-      font-style: italic;
-      font-size: 11pt;
-      margin-bottom: 2pt;
-    }
-
-    .entry-desc {
-      font-size: 11pt;
-      margin-left: 12pt;
-      white-space: pre-line;
-    }
-
-    .footer {
-      margin-top: 30pt;
-      text-align: center;
-      font-size: 9pt;
-      color: #555;
-      border-top: 0.5px solid #ccc;
-      padding-top: 8pt;
-    }
-
-    @media print {
-      body { padding: 0.5in; }
-      .contact-line a { text-decoration: underline; }
-      .footer { position: fixed; bottom: 0; left: 0; right: 0; }
-    }
+    h1 { font-size: 20pt; font-weight: bold; margin-bottom: 10pt; border-bottom: 1.5px solid #aaa; padding-bottom: 8pt; }
+    .section { margin-top: 18pt; }
+    .section-title { font-size: 13pt; font-weight: bold; margin-bottom: 8pt; border-bottom: 0.75px solid #ccc; padding-bottom: 3pt; text-transform: uppercase; }
+    .contact-grid { display: flex; gap: 20px; margin-bottom: 6pt; font-size: 10.5pt; }
+    .contact-left, .contact-right { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .contact-label { font-weight: 600; display: inline-block; width: 70px; color: #333; }
+    .contact-value a { color: #000; text-decoration: underline; }
+    .edu-entry { margin-bottom: 10pt; }
+    .edu-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .edu-year { font-style: italic; font-weight: normal; color: #444; }
+    .edu-institution { font-style: italic; color: #333; }
+    .exp-entry { margin-bottom: 12pt; }
+    .exp-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .exp-duration { font-style: italic; font-weight: normal; color: #444; }
+    .exp-company { font-style: italic; color: #333; margin-bottom: 4pt; }
+    .exp-desc { margin-left: 10pt; font-size: 10.5pt; white-space: pre-line; }
+    .cert-entry { margin-bottom: 12pt; }
+    .cert-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .cert-date { font-style: italic; font-weight: normal; color: #444; }
+    .cert-issued { font-style: italic; color: #333; margin-bottom: 2pt; }
+    .cert-desc { margin-left: 10pt; font-size: 10.5pt; white-space: pre-line; }
+    .proj-entry { margin-bottom: 12pt; }
+    .proj-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .proj-date { font-style: italic; font-weight: normal; color: #444; }
+    .proj-desc { margin-left: 10pt; font-size: 10.5pt; white-space: pre-line; }
+    .proj-tech { margin-top: 4pt; margin-left: 10pt; font-size: 10.5pt; }
+    .tech-label { font-weight: bold; }
+    .footer { margin-top: 30pt; text-align: center; font-size: 9pt; color: #555; border-top: 0.5px solid #ccc; padding-top: 8pt; }
+    @media print { body { padding: 0.5in; } .footer { position: fixed; bottom: 0; left: 0; right: 0; } }
   </style>
 </head>
 <body>
-
   <h1>${escapeHtml(user.name) || "YOUR NAME"}</h1>
-
-  <div class="contact-line">${contactText}</div>
-
-  <div class="section">
-    <div class="section-title">SUMMARY</div>
-    <p>${escapeHtml(summaryText)}</p>
-  </div>
-
-  <div class="section">
-    <div class="section-title">SKILLS</div>
-    <p>${escapeHtml(skillsText)}</p>
-  </div>
-
-  <div class="section">
-    <div class="section-title">EDUCATION</div>
-    <div style="white-space: pre-line;">${educationItems}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">EXPERIENCE</div>
-    <div style="white-space: pre-line;">${experienceItems}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">CERTIFICATIONS</div>
-    <div style="white-space: pre-line;">${certItems}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">PROJECTS</div>
-    <div style="white-space: pre-line;">${projectItems}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">INTERESTS</div>
-    <p>${escapeHtml(interestsText)}</p>
-  </div>
-
+  ${contactGrid}
+  <div class="section"><div class="section-title">Summary</div><p>${escapeHtml(summaryText)}</p></div>
+  <div class="section"><div class="section-title">Skills</div><p>${skillsText}</p></div>
+  <div class="section"><div class="section-title">Education</div>${educationHtml}</div>
+  <div class="section"><div class="section-title">Experience</div>${experienceHtml}</div>
+  <div class="section"><div class="section-title">Certifications</div>${certsHtml}</div>
+  <div class="section"><div class="section-title">Projects</div>${projectsHtml}</div>
+  <div class="section"><div class="section-title">Interests</div><p>${interestsText}</p></div>
   <div class="footer">${footerText}</div>
+</body>
+</html>`;
+  }
+
+  // Word‑friendly HTML using tables for layout (no flexbox)
+  async function generateDocxHTML() {
+    const { user, certificates, projects } = await fetchFullData();
+    const p = user.profile || {};
+
+    const summaryText = p.summary || p.bio || "—";
+
+    // Contact info as a two‑column table
+    let leftCells = [];
+    let rightCells = [];
+    if (user.email) leftCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">Email:</span><span>${escapeHtml(user.email)}</span>`);
+    if (p.github) leftCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">GitHub:</span><span><a href="${escapeHtml(p.github)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.github)}</a></span>`);
+    if (user.phone) rightCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">Phone:</span><span>${escapeHtml(user.phone)}</span>`);
+    if (p.linkedin) rightCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">LinkedIn:</span><span><a href="${escapeHtml(p.linkedin)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.linkedin)}</a></span>`);
+    if (p.portfolio) {
+      rightCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">Portfolio:</span><span><a href="${escapeHtml(p.portfolio)}" style="color:#000; text-decoration:underline;">${escapeHtml(p.portfolio)}</a></span>`);
+    }
+
+    const contactTable = `
+      <table style="width:100%; border-collapse:collapse; margin-bottom:6pt; font-size:10.5pt;">
+        <tr>
+          <td style="width:50%; vertical-align:top; padding-right:20px;">${leftCells.map(c => `<div style="margin-bottom:4px;">${c}</div>`).join("")}</td>
+          <td style="width:50%; vertical-align:top;">${rightCells.map(c => `<div style="margin-bottom:4px;">${c}</div>`).join("")}</td>
+        </tr>
+      </table>
+    `;
+
+    const skillsText = (p.skills && p.skills.length) ? escapeHtml(p.skills.join(", ")) : "—";
+
+    // Education
+    let educationHtml = "—";
+    if (p.education && p.education.length) {
+      educationHtml = p.education.map(e => `
+        <div style="margin-bottom:10pt;">
+          <div style="display:flex; justify-content:space-between; font-weight:bold;">
+            <span>${escapeHtml(e.degree)}</span>
+            <span style="font-style:italic; font-weight:normal; color:#444;">${e.year ? escapeHtml(e.year) : ""}</span>
+          </div>
+          <div style="font-style:italic; color:#333;">${escapeHtml(e.institution)}</div>
+        </div>
+      `).join("");
+    }
+
+    // Experience
+    let experienceHtml = "—";
+    if (p.experience && p.experience.length) {
+      experienceHtml = p.experience.map(exp => `
+        <div style="margin-bottom:12pt;">
+          <div style="display:flex; justify-content:space-between; font-weight:bold;">
+            <span>${escapeHtml(exp.role)}</span>
+            <span style="font-style:italic; font-weight:normal; color:#444;">${exp.duration ? escapeHtml(exp.duration) : ""}</span>
+          </div>
+          <div style="font-style:italic; color:#333; margin-bottom:4pt;">${escapeHtml(exp.company)}</div>
+          ${exp.description ? `<div style="margin-left:10pt; font-size:10.5pt; white-space:pre-line;">• ${escapeHtml(exp.description)}</div>` : ""}
+        </div>
+      `).join("");
+    }
+
+    // Certificates
+    let certsHtml = "—";
+    if (certificates.length) {
+      certsHtml = certificates.map(cert => {
+        const dateStr = formatDate(cert.date || cert.createdAt);
+        return `
+          <div style="margin-bottom:12pt;">
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+              <span>${escapeHtml(cert.title)}</span>
+              <span style="font-style:italic; font-weight:normal; color:#444;">${dateStr}</span>
+            </div>
+            ${cert.issuedBy ? `<div style="font-style:italic; color:#333; margin-bottom:2pt;">Issued by: ${escapeHtml(cert.issuedBy)}</div>` : ""}
+            ${cert.description ? `<div style="margin-left:10pt; font-size:10.5pt; white-space:pre-line;">• ${escapeHtml(cert.description)}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Projects
+    let projectsHtml = "—";
+    if (projects.length) {
+      projectsHtml = projects.map(proj => {
+        const dateStr = formatDate(proj.date || proj.createdAt);
+        return `
+          <div style="margin-bottom:12pt;">
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+              <span>${escapeHtml(proj.title)}</span>
+              <span style="font-style:italic; font-weight:normal; color:#444;">${dateStr}</span>
+            </div>
+            ${proj.description ? `<div style="margin-left:10pt; font-size:10.5pt; white-space:pre-line;">• ${escapeHtml(proj.description)}</div>` : ""}
+            ${proj.techStack && proj.techStack.length ? `<div style="margin-top:4pt; margin-left:10pt; font-size:10.5pt;"><span style="font-weight:bold;">Technologies used:</span> ${proj.techStack.map(t => escapeHtml(t)).join(", ")}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    const interestsText = (p.interests && p.interests.length) ? escapeHtml(p.interests.join(", ")) : "—";
+
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const footerText = `Generated with SkillMatrix on ${formattedDate}`;
+
+    // Word‑friendly template with inline styles only
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume – ${escapeHtml(user.name) || regNo}</title>
+</head>
+<body style="font-family:'Times New Roman', Times, serif; font-size:11pt; line-height:1.5; color:#000; background:#fff; padding:0.7in; margin:0;">
+
+  <h1 style="font-size:20pt; font-weight:bold; margin:0 0 10pt; border-bottom:1.5px solid #aaa; padding-bottom:8pt;">${escapeHtml(user.name) || "YOUR NAME"}</h1>
+
+  ${contactTable}
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Summary</div>
+    <p style="margin:0 0 12pt;">${escapeHtml(summaryText)}</p>
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Skills</div>
+    <p style="margin:0 0 12pt;">${skillsText}</p>
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Education</div>
+    ${educationHtml}
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Experience</div>
+    ${experienceHtml}
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Certifications</div>
+    ${certsHtml}
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Projects</div>
+    ${projectsHtml}
+  </div>
+
+  <div style="margin-top:18pt;">
+    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Interests</div>
+    <p style="margin:0 0 12pt;">${interestsText}</p>
+  </div>
+
+  <div style="margin-top:30pt; text-align:center; font-size:9pt; color:#555; border-top:0.5px solid #ccc; padding-top:8pt;">${footerText}</div>
 
 </body>
 </html>`;
@@ -240,29 +362,8 @@ export default function ResumeButton({ regNo }) {
   }
 
   async function downloadDOCX() {
-    const html = await generateResumeHTML();
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    const bodyContent = bodyMatch ? bodyMatch[1] : html;
-    const fullHtml = `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Resume</title>
-      <style>
-        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; margin: 0.75in; line-height: 1.4; }
-        .section-title { font-size: 14pt; font-weight: bold; margin-top: 16pt; margin-bottom: 8pt; border-bottom: 1px solid #ccc; }
-        .contact-line { margin-bottom: 12pt; }
-        .contact-line a { color: #000; text-decoration: underline; }
-        .entry { margin-bottom: 12pt; }
-        .entry-title { font-weight: bold; }
-        .entry-sub { font-style: italic; margin-bottom: 2pt; }
-        .entry-desc { margin-left: 12pt; white-space: pre-line; }
-        .footer { margin-top: 30pt; text-align: center; font-size: 9pt; color: #555; border-top: 0.5px solid #ccc; padding-top: 8pt; }
-      </style>
-    </head>
-    <body>${bodyContent}</body>
-    </html>`;
-    const blob = asBlob(fullHtml);
+    const docxHtml = await generateDocxHTML(); // Use Word‑friendly HTML
+    const blob = asBlob(docxHtml);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

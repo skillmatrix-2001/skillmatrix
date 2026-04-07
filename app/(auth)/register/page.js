@@ -4,6 +4,198 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// ===================== Custom Alert System (same as admin) =====================
+function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
+  const [isClosing, setIsClosing] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(timerSeconds);
+  const [canConfirm, setCanConfirm] = useState(timerSeconds === 0);
+
+  useEffect(() => {
+    if (timerSeconds > 0 && type === 'confirm') {
+      const interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanConfirm(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [timerSeconds, type]);
+
+  const handleClose = (confirmed) => {
+    if (confirmed && timerSeconds > 0 && !canConfirm) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      if (confirmed) onConfirm?.();
+      else onCancel?.();
+    }, 200);
+  };
+
+  const isConfirm = type === 'confirm';
+  const borderColor = isConfirm ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.3)';
+  const textColor = isConfirm ? '#FCA5A5' : '#10B981';
+  const buttonBg = isConfirm ? '#DC2626' : '#7C5CFF';
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
+      }}
+    >
+      <div
+        style={{
+          background: '#12151C',
+          border: `1px solid ${borderColor}`,
+          borderRadius: 12,
+          padding: '1.5rem',
+          maxWidth: 400,
+          width: '100%',
+          textAlign: 'center',
+          animation: isClosing ? 'slideOut 0.2s ease-out forwards' : 'slideIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+        }}
+      >
+        <p
+          style={{
+            color: textColor,
+            fontSize: 15,
+            fontWeight: 600,
+            marginBottom: 24,
+            lineHeight: 1.5,
+          }}
+        >
+          {message}
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          {isConfirm ? (
+            <>
+              <button
+                onClick={() => handleClose(true)}
+                disabled={!canConfirm}
+                style={{
+                  background: buttonBg,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                  cursor: !canConfirm ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'background 0.2s',
+                  opacity: !canConfirm ? 0.6 : 1,
+                }}
+                onMouseOver={(e) => { if (canConfirm) e.target.style.background = '#B91C1C'; }}
+                onMouseOut={(e) => { if (canConfirm) e.target.style.background = buttonBg; }}
+              >
+                Yes, Delete {!canConfirm && `(${timeLeft}s)`}
+              </button>
+              <button
+                onClick={() => handleClose(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #222634',
+                  color: '#9CA3AF',
+                  borderRadius: 8,
+                  padding: '8px 20px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => (e.target.style.background = '#171B24')}
+                onMouseOut={(e) => (e.target.style.background = 'transparent')}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleClose(true)}
+              style={{
+                background: buttonBg,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 20px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                transition: 'background 0.2s',
+              }}
+              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOut={(e) => (e.target.style.background = buttonBg)}
+            >
+              OK
+            </button>
+          )}
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideOut {
+          from { opacity: 1; transform: translateY(0) scale(1); }
+          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function useCustomAlert() {
+  const [alert, setAlert] = useState(null);
+
+  const showAlert = (message, type = 'info', timerSeconds = 0) => {
+    return new Promise((resolve) => {
+      setAlert({ message, type, resolve, timerSeconds });
+    });
+  };
+
+  const AlertComponent = alert ? (
+    <CustomAlert
+      message={alert.message}
+      type={alert.type}
+      timerSeconds={alert.timerSeconds}
+      onConfirm={() => {
+        if (alert.resolve) alert.resolve(true);
+        setAlert(null);
+      }}
+      onCancel={() => {
+        if (alert.resolve) alert.resolve(false);
+        setAlert(null);
+      }}
+    />
+  ) : null;
+
+  return { showAlert, AlertComponent };
+}
+
+// ===================== Main Register Component =====================
 export default function RegisterPage() {
   const router = useRouter();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -24,6 +216,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [dobError, setDobError] = useState('');
+
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const generateBatchYears = () => {
     const years = [];
@@ -97,11 +291,45 @@ export default function RegisterPage() {
     return true;
   };
 
+  // Auto‑detect batch year from register number
+  const handleRegisterNumberChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // only digits
+    setFormData({ ...formData, registerNumber: value });
+
+    // If we have at least 6 digits, try to extract batch code (digits 5-6)
+    if (value.length >= 6) {
+      const batchCode = value.substring(4, 6);
+      const batchYear = 2000 + parseInt(batchCode, 10);
+      if (!isNaN(batchYear) && batchYear >= 2000 && batchYear <= 2099) {
+        // Check if it's within our allowed batch year range
+        const allowedYears = generateBatchYears();
+        if (allowedYears.includes(batchYear)) {
+          setFormData(prev => ({ ...prev, batchYear }));
+        }
+      }
+    }
+
+    if (error) setError('');
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'registerNumber') {
+      handleRegisterNumberChange(e);
+      return;
+    }
     setFormData({ ...formData, [name]: value });
     if (name === 'dob') validateDOB(value);
     if (error) setError('');
+  };
+
+  // Validate that batch year matches register number's batch code
+  const validateBatchYearMatch = () => {
+    const reg = formData.registerNumber;
+    if (reg.length !== 12) return true; // other validation will catch length
+    const batchCode = reg.substring(4, 6);
+    const expectedYear = 2000 + parseInt(batchCode, 10);
+    return formData.batchYear === expectedYear;
   };
 
   const handleSubmit = async (e) => {
@@ -109,6 +337,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
+    // Basic validations
     if (!/^\d{12}$/.test(formData.registerNumber)) {
       setError('Register number must be exactly 12 digits');
       setLoading(false);
@@ -133,6 +362,16 @@ export default function RegisterPage() {
     if (!validateDOB(formData.dob)) {
       setError(dobError || 'Invalid date of birth. You must be at least 17 years old.');
       setLoading(false);
+      return;
+    }
+
+    // Check batch year consistency
+    if (!validateBatchYearMatch()) {
+      setLoading(false);
+      await showAlert(
+        'The batch year does not match the register number\'s batch code. Please correct either the register number or the batch year.',
+        'error'
+      );
       return;
     }
 
@@ -225,11 +464,13 @@ export default function RegisterPage() {
                 required
                 value={formData.registerNumber}
                 onChange={handleChange}
-                placeholder="951321001234"
+                placeholder="951322xxxxxx"
                 maxLength={12}
                 style={inputStyle}
               />
-              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Exactly 12 digits (e.g., 951321001234)</p>
+              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+                Format: 9513 + 2‑digit batch year + 6 digits
+              </p>
             </div>
 
             <div>
@@ -288,7 +529,9 @@ export default function RegisterPage() {
                     <option key={year} value={year}>{year} {year === new Date().getFullYear() ? '(Current Year)' : ''}</option>
                   ))}
                 </select>
-                <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Your joining batch year (automatically updates each year)</p>
+                <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+                  Your joining batch year (auto‑filled from register number)
+                </p>
               </div>
             </div>
 
@@ -393,6 +636,7 @@ export default function RegisterPage() {
           </form>
         </div>
       </div>
+      {AlertComponent}
     </div>
   );
 }

@@ -292,7 +292,6 @@ export default function AdminSettingsPage() {
   const [staffForm, setStaffForm] = useState({
     name: '',
     department: '',
-    username: '',
     staffId: '',
     password: '',
     confirmPassword: '',
@@ -422,7 +421,11 @@ export default function AdminSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          ...staffForm,
+          name: staffForm.name,
+          department: staffForm.department,
+          staffId: staffForm.staffId,
+          password: staffForm.password,
+          username: staffForm.name, // Use staff name as username
           adminUserId: adminUser._id,
           adminUserRole: adminUser.role,
         }),
@@ -433,7 +436,6 @@ export default function AdminSettingsPage() {
         setStaffForm({
           name: '',
           department: departments[0]?.name || '',
-          username: '',
           staffId: '',
           password: '',
           confirmPassword: '',
@@ -774,7 +776,7 @@ export default function AdminSettingsPage() {
 
             {activeTab === 'staff' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Staff List (safe view – card format with tint) */}
+                {/* Staff List (safe view – redesigned clean cards) */}
                 <div>
                   <h2 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 600, marginBottom: '1rem' }}>All Staff Accounts</h2>
                   {staffList.length === 0 ? (
@@ -782,19 +784,20 @@ export default function AdminSettingsPage() {
                       <p style={{ color: '#6B7280' }}>No staff accounts yet. Create one below.</p>
                     </div>
                   ) : (
-                    <div className="staff-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+                    <div className="staff-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                       {staffList.map((staff) => {
                         const dept = departments.find(d => d.name === staff.department);
-                        const tintColor = dept ? hexToRgba(dept.color, 0.1) : 'rgba(245,158,11,0.08)';
-                        const hoverGlow = dept ? hexToRgba(dept.color, 0.2) : 'rgba(245,158,11,0.2)';
+                        const tintColor = dept ? hexToRgba(dept.color, 0.08) : 'rgba(245,158,11,0.06)';
+                        const borderColor = dept ? hexToRgba(dept.color, 0.2) : 'rgba(245,158,11,0.15)';
+                        const hoverGlow = dept ? hexToRgba(dept.color, 0.2) : 'rgba(245,158,11,0.15)';
                         return (
                           <div
                             key={staff._id}
                             style={{
                               background: tintColor,
-                              border: `1px solid ${dept ? hexToRgba(dept.color, 0.2) : 'rgba(245,158,11,0.2)'}`,
+                              border: `1px solid ${borderColor}`,
                               borderRadius: 12,
-                              padding: '1rem',
+                              padding: '1.2rem',
                               transition: 'all 0.2s',
                             }}
                             onMouseOver={(e) => {
@@ -804,30 +807,30 @@ export default function AdminSettingsPage() {
                               e.currentTarget.style.boxShadow = 'none';
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {UserIcon}
-                              </div>
-                              <div>
-                                <div style={{ color: '#E5E7EB', fontWeight: 600 }}>{staff.name}</div>
-                                <div style={{ fontSize: 12, color: '#6B7280' }}>@{staff.username}</div>
-                              </div>
+                            {/* Name - larger and prominent */}
+                            <div style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 16, marginBottom: 12 }}>
+                              {staff.name}
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>Staff ID</div>
-                                <div style={{ fontSize: 13, color: '#E5E7EB', fontFamily: 'monospace' }}>{staff.staffId}</div>
+                            
+                            {/* Details - muted labels and values */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#6B7280', minWidth: 70 }}>Staff ID</span>
+                                <span style={{ fontSize: 13, color: '#9CA3AF', fontFamily: 'monospace' }}>{staff.staffId}</span>
                               </div>
-                              <div>
-                                <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>Department</div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#6B7280', minWidth: 70 }}>Department</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: dept?.color || '#F59E0B' }} />
-                                  <span style={{ fontSize: 13, color: '#E5E7EB' }}>{staff.department}</span>
+                                  <span style={{ fontSize: 13, color: '#9CA3AF' }}>{staff.department}</span>
                                 </div>
                               </div>
-                            </div>
-                            <div style={{ fontSize: 11, color: '#6B7280', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, marginTop: 4 }}>
-                              Joined: {new Date(staff.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#6B7280', minWidth: 70 }}>Joined</span>
+                                <span style={{ fontSize: 13, color: '#9CA3AF' }}>
+                                  {new Date(staff.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -869,17 +872,6 @@ export default function AdminSettingsPage() {
                             <option key={dept._id} value={dept.name}>{dept.name}</option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', color: '#6B7280', fontSize: 12, marginBottom: 6 }}>Username *</label>
-                        <input
-                          type="text"
-                          value={staffForm.username}
-                          onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}
-                          style={inputStyle}
-                          placeholder="e.g., r.chen"
-                          required
-                        />
                       </div>
                       <div>
                         <label style={{ display: 'block', color: '#6B7280', fontSize: 12, marginBottom: 6 }}>Staff ID *</label>
@@ -929,7 +921,7 @@ export default function AdminSettingsPage() {
                   </form>
                 </CollapsibleSection>
 
-                {/* Danger Zone (unchanged) */}
+                {/* Danger Zone (redesigned clean cards) */}
                 <CollapsibleSection
                   title="Danger Zone"
                   iconSvg={DangerIcon}
@@ -946,21 +938,13 @@ export default function AdminSettingsPage() {
                       <p style={{ color: '#9CA3AF', fontSize: 13 }}>No staff accounts to delete.</p>
                     </div>
                   ) : (
-                    <div className="staff-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+                    <div className="staff-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                       {staffList.map((staff) => {
                         const dept = departments.find(d => d.name === staff.department);
                         return (
-                          <div key={staff._id} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 12, padding: '1rem' }}>
+                          <div key={staff._id} style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 12, padding: '1.2rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  {UserIcon}
-                                </div>
-                                <div>
-                                  <div style={{ color: '#FCA5A5', fontWeight: 600 }}>{staff.name}</div>
-                                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>@{staff.username}</div>
-                                </div>
-                              </div>
+                              <div style={{ color: '#FCA5A5', fontWeight: 600, fontSize: 16 }}>{staff.name}</div>
                               <button
                                 onClick={() => handleDeleteStaff(staff._id, staff.name)}
                                 style={dangerButtonStyle}
@@ -970,13 +954,13 @@ export default function AdminSettingsPage() {
                                 Delete
                               </button>
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>Staff ID</div>
-                                <div style={{ fontSize: 13, color: '#FCA5A5', fontFamily: 'monospace' }}>{staff.staffId}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#9CA3AF', minWidth: 70 }}>Staff ID</span>
+                                <span style={{ fontSize: 13, color: '#FCA5A5', fontFamily: 'monospace' }}>{staff.staffId}</span>
                               </div>
-                              <div>
-                                <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>Department</div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#9CA3AF', minWidth: 70 }}>Department</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: dept?.color || '#F59E0B' }} />
                                   <span style={{ fontSize: 13, color: '#FCA5A5' }}>{staff.department}</span>
