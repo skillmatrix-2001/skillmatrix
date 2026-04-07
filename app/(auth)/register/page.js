@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// ===================== Custom Alert System (same as admin) =====================
+// ===================== Custom Alert System (unchanged) =====================
 function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
   const [isClosing, setIsClosing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timerSeconds);
@@ -217,6 +217,17 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [dobError, setDobError] = useState('');
 
+  // New states for real‑time validation
+  const [registerNumberError, setRegisterNumberError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isCheckingRegNo, setIsCheckingRegNo] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [regNoExists, setRegNoExists] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+
+  const regNoCheckTimer = useRef(null);
+  const emailCheckTimer = useRef(null);
+
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const generateBatchYears = () => {
@@ -291,17 +302,107 @@ export default function RegisterPage() {
     return true;
   };
 
-  // Auto‑detect batch year from register number
+  // Validate register number pattern and match with batch year
+  const validateRegisterNumberPattern = useCallback((regNo, batchYear) => {
+    if (!regNo) {
+      setRegisterNumberError('');
+      return false;
+    }
+    if (!/^\d{12}$/.test(regNo)) {
+      setRegisterNumberError('Register number must be exactly 12 digits');
+      return false;
+    }
+    if (!regNo.startsWith('9513')) {
+      setRegisterNumberError('Register number must start with "9513"');
+      return false;
+    }
+    const batchCodeFromReg = regNo.substring(4, 6);
+    const expectedBatchCode = String(batchYear).slice(-2);
+    if (batchCodeFromReg !== expectedBatchCode) {
+      setRegisterNumberError(`Digits 5-6 must be "${expectedBatchCode}" (last two digits of batch year ${batchYear})`);
+      return false;
+    }
+    setRegisterNumberError('');
+    return true;
+  }, []);
+
+  // Debounced check for register number existence
+  const checkRegisterNumberExists = useCallback(async (regNo) => {
+    if (!regNo || !/^\d{12}$/.test(regNo)) return;
+    setIsCheckingRegNo(true);
+    try {
+      const res = await fetch(`/api/auth/check-register?regNo=${regNo}`);
+      const data = await res.json();
+      setRegNoExists(data.exists);
+      if (data.exists) {
+        setRegisterNumberError('This register number is already registered');
+      } else {
+        // Clear existence error if pattern is valid
+        if (validateRegisterNumberPattern(regNo, formData.batchYear)) {
+          setRegisterNumberError('');
+        }
+      }
+    } catch {
+      // Ignore errors, assume not exists for safety? Or keep previous state.
+    } finally {
+      setIsCheckingRegNo(false);
+    }
+  }, [formData.batchYear, validateRegisterNumberPattern]);
+
+  // Debounced check for email existence
+  const checkEmailExists = useCallback(async (email) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setIsCheckingEmail(true);
+    try {
+      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      setEmailExists(data.exists);
+      if (data.exists) {
+        setEmailError('This email is already registered');
+      } else {
+        setEmailError('');
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
+  // Trigger debounced checks
+  useEffect(() => {
+    if (regNoCheckTimer.current) clearTimeout(regNoCheckTimer.current);
+    if (formData.registerNumber.length === 12 && validateRegisterNumberPattern(formData.registerNumber, formData.batchYear)) {
+      regNoCheckTimer.current = setTimeout(() => {
+        checkRegisterNumberExists(formData.registerNumber);
+      }, 500);
+    } else {
+      setRegNoExists(false); // Reset existence state if pattern invalid
+    }
+    return () => clearTimeout(regNoCheckTimer.current);
+  }, [formData.registerNumber, formData.batchYear, checkRegisterNumberExists, validateRegisterNumberPattern]);
+
+  useEffect(() => {
+    if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+    if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      emailCheckTimer.current = setTimeout(() => {
+        checkEmailExists(formData.email);
+      }, 500);
+    } else {
+      setEmailExists(false);
+    }
+    return () => clearTimeout(emailCheckTimer.current);
+  }, [formData.email, checkEmailExists]);
+
   const handleRegisterNumberChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ''); // only digits
+    const value = e.target.value.replace(/\D/g, '').slice(0, 12);
     setFormData({ ...formData, registerNumber: value });
 
-    // If we have at least 6 digits, try to extract batch code (digits 5-6)
+    // Auto‑detect batch year from register number digits 5-6
     if (value.length >= 6) {
       const batchCode = value.substring(4, 6);
       const batchYear = 2000 + parseInt(batchCode, 10);
       if (!isNaN(batchYear) && batchYear >= 2000 && batchYear <= 2099) {
-        // Check if it's within our allowed batch year range
         const allowedYears = generateBatchYears();
         if (allowedYears.includes(batchYear)) {
           setFormData(prev => ({ ...prev, batchYear }));
@@ -309,6 +410,7 @@ export default function RegisterPage() {
       }
     }
 
+    // Clear any error when user types
     if (error) setError('');
   };
 
@@ -320,58 +422,39 @@ export default function RegisterPage() {
     }
     setFormData({ ...formData, [name]: value });
     if (name === 'dob') validateDOB(value);
+    if (name === 'email') setEmailError('');
     if (error) setError('');
   };
 
-  // Validate that batch year matches register number's batch code
-  const validateBatchYearMatch = () => {
-    const reg = formData.registerNumber;
-    if (reg.length !== 12) return true; // other validation will catch length
-    const batchCode = reg.substring(4, 6);
-    const expectedYear = 2000 + parseInt(batchCode, 10);
-    return formData.batchYear === expectedYear;
+  // Overall form validity for button disable
+  const isFormValid = () => {
+    // Basic required fields
+    if (!formData.registerNumber || !formData.name || !formData.email || !formData.dob || !formData.password || !formData.confirmPassword) {
+      return false;
+    }
+    // Pattern validation
+    if (registerNumberError || regNoExists) return false;
+    if (emailError || emailExists) return false;
+    if (dobError) return false;
+    if (formData.password !== formData.confirmPassword) return false;
+    if (formData.password.length < 6) return false;
+    if (departments.length === 0) return false;
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isFormValid()) return;
+
     setLoading(true);
     setError('');
 
-    // Basic validations
-    if (!/^\d{12}$/.test(formData.registerNumber)) {
-      setError('Register number must be exactly 12 digits');
+    // Double‑check batch year match (should already be validated)
+    const batchCodeFromReg = formData.registerNumber.substring(4, 6);
+    const expectedBatchCode = String(formData.batchYear).slice(-2);
+    if (batchCodeFromReg !== expectedBatchCode) {
+      setError('Batch year does not match register number. Please correct.');
       setLoading(false);
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-    if (!validateDOB(formData.dob)) {
-      setError(dobError || 'Invalid date of birth. You must be at least 17 years old.');
-      setLoading(false);
-      return;
-    }
-
-    // Check batch year consistency
-    if (!validateBatchYearMatch()) {
-      setLoading(false);
-      await showAlert(
-        'The batch year does not match the register number\'s batch code. Please correct either the register number or the batch year.',
-        'error'
-      );
       return;
     }
 
@@ -464,10 +547,18 @@ export default function RegisterPage() {
                 required
                 value={formData.registerNumber}
                 onChange={handleChange}
-                placeholder="951322xxxxxx"
+                placeholder="9513XXXXXXXX"
                 maxLength={12}
-                style={inputStyle}
+                style={{
+                  ...inputStyle,
+                  borderColor: registerNumberError || regNoExists ? '#EF4444' : '#222634',
+                }}
               />
+              {isCheckingRegNo && <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Checking availability...</p>}
+              {registerNumberError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{registerNumberError}</p>}
+              {!registerNumberError && !regNoExists && formData.registerNumber.length === 12 && (
+                <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Valid register number</p>
+              )}
               <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
                 Format: 9513 + 2‑digit batch year + 6 digits
               </p>
@@ -495,8 +586,16 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="your@email.com"
-                style={inputStyle}
+                style={{
+                  ...inputStyle,
+                  borderColor: emailError || emailExists ? '#EF4444' : '#222634',
+                }}
               />
+              {isCheckingEmail && <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Checking email...</p>}
+              {emailError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{emailError}</p>}
+              {!emailError && !emailExists && formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
+                <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Email available</p>
+              )}
               <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>We'll send important notifications to this email</p>
             </div>
 
@@ -530,7 +629,7 @@ export default function RegisterPage() {
                   ))}
                 </select>
                 <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
-                  Your joining batch year (auto‑filled from register number)
+                  Auto‑filled from register number (must match)
                 </p>
               </div>
             </div>
@@ -601,7 +700,11 @@ export default function RegisterPage() {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="••••••••"
-                    style={{ ...inputStyle, paddingRight: '40px' }}
+                    style={{
+                      ...inputStyle,
+                      paddingRight: '40px',
+                      borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#EF4444' : '#222634',
+                    }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeButtonStyle}>
                     {showConfirmPassword ? (
@@ -616,20 +719,25 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>Passwords do not match</p>
+                )}
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading || departments.length === 0}
+              disabled={loading || !isFormValid()}
               style={{
                 width: '100%', background: '#7C5CFF', color: '#fff', border: 'none',
                 borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 500,
-                cursor: 'pointer', transition: 'background 0.2s', fontFamily: 'inherit',
-                marginTop: '0.5rem'
+                cursor: loading || !isFormValid() ? 'not-allowed' : 'pointer',
+                transition: 'background 0.2s', fontFamily: 'inherit',
+                marginTop: '0.5rem',
+                opacity: loading || !isFormValid() ? 0.6 : 1,
               }}
-              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
-              onMouseOut={(e) => (e.target.style.background = '#7C5CFF')}
+              onMouseOver={(e) => { if (!loading && isFormValid()) e.target.style.background = '#6d4fe0'; }}
+              onMouseOut={(e) => { if (!loading && isFormValid()) e.target.style.background = '#7C5CFF'; }}
             >
               {loading ? 'Registering...' : 'Register as Student'}
             </button>
