@@ -44,7 +44,7 @@ export default function ResumeButton({ regNo }) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
   };
 
-  // PDF-optimized HTML (unchanged, uses Flexbox)
+  // PDF-optimized HTML (flexbox, clean)
   async function generateResumeHTML() {
     const { user, certificates, projects } = await fetchFullData();
     const p = user.profile || {};
@@ -131,17 +131,11 @@ export default function ResumeButton({ regNo }) {
       }).join("");
     }
 
-    const interestsText = (p.interests && p.interests.length) ? escapeHtml(p.interests.join(", ")) : "—";
-
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const footerText = `Generated with SkillMatrix on ${formattedDate}`;
-
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Resume – ${escapeHtml(user.name) || regNo}</title>
+  <title>Resume</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -179,8 +173,8 @@ export default function ResumeButton({ regNo }) {
     .proj-desc { margin-left: 10pt; font-size: 10.5pt; white-space: pre-line; }
     .proj-tech { margin-top: 4pt; margin-left: 10pt; font-size: 10.5pt; }
     .tech-label { font-weight: bold; }
-    .footer { margin-top: 30pt; text-align: center; font-size: 9pt; color: #555; border-top: 0.5px solid #ccc; padding-top: 8pt; }
-    @media print { body { padding: 0.5in; } .footer { position: fixed; bottom: 0; left: 0; right: 0; } }
+    @page { margin: 0.5in; size: letter; }
+    @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
@@ -192,20 +186,17 @@ export default function ResumeButton({ regNo }) {
   <div class="section"><div class="section-title">Experience</div>${experienceHtml}</div>
   <div class="section"><div class="section-title">Certifications</div>${certsHtml}</div>
   <div class="section"><div class="section-title">Projects</div>${projectsHtml}</div>
-  <div class="section"><div class="section-title">Interests</div><p>${interestsText}</p></div>
-  <div class="footer">${footerText}</div>
 </body>
 </html>`;
   }
 
-  // Word‑friendly HTML using tables for layout (no flexbox)
+  // Word‑friendly HTML using tables (no flexbox)
   async function generateDocxHTML() {
     const { user, certificates, projects } = await fetchFullData();
     const p = user.profile || {};
 
     const summaryText = p.summary || p.bio || "—";
 
-    // Contact info as a two‑column table
     let leftCells = [];
     let rightCells = [];
     if (user.email) leftCells.push(`<span style="font-weight:600; display:inline-block; width:70px;">Email:</span><span>${escapeHtml(user.email)}</span>`);
@@ -227,7 +218,6 @@ export default function ResumeButton({ regNo }) {
 
     const skillsText = (p.skills && p.skills.length) ? escapeHtml(p.skills.join(", ")) : "—";
 
-    // Education
     let educationHtml = "—";
     if (p.education && p.education.length) {
       educationHtml = p.education.map(e => `
@@ -241,7 +231,6 @@ export default function ResumeButton({ regNo }) {
       `).join("");
     }
 
-    // Experience
     let experienceHtml = "—";
     if (p.experience && p.experience.length) {
       experienceHtml = p.experience.map(exp => `
@@ -256,7 +245,6 @@ export default function ResumeButton({ regNo }) {
       `).join("");
     }
 
-    // Certificates
     let certsHtml = "—";
     if (certificates.length) {
       certsHtml = certificates.map(cert => {
@@ -274,7 +262,6 @@ export default function ResumeButton({ regNo }) {
       }).join("");
     }
 
-    // Projects
     let projectsHtml = "—";
     if (projects.length) {
       projectsHtml = projects.map(proj => {
@@ -292,18 +279,11 @@ export default function ResumeButton({ regNo }) {
       }).join("");
     }
 
-    const interestsText = (p.interests && p.interests.length) ? escapeHtml(p.interests.join(", ")) : "—";
-
-    const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const footerText = `Generated with SkillMatrix on ${formattedDate}`;
-
-    // Word‑friendly template with inline styles only
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Resume – ${escapeHtml(user.name) || regNo}</title>
+  <title>Resume</title>
 </head>
 <body style="font-family:'Times New Roman', Times, serif; font-size:11pt; line-height:1.5; color:#000; background:#fff; padding:0.7in; margin:0;">
 
@@ -341,13 +321,6 @@ export default function ResumeButton({ regNo }) {
     ${projectsHtml}
   </div>
 
-  <div style="margin-top:18pt;">
-    <div style="font-size:13pt; font-weight:bold; margin-bottom:8pt; border-bottom:0.75px solid #ccc; padding-bottom:3pt; text-transform:uppercase;">Interests</div>
-    <p style="margin:0 0 12pt;">${interestsText}</p>
-  </div>
-
-  <div style="margin-top:30pt; text-align:center; font-size:9pt; color:#555; border-top:0.5px solid #ccc; padding-top:8pt;">${footerText}</div>
-
 </body>
 </html>`;
   }
@@ -362,7 +335,7 @@ export default function ResumeButton({ regNo }) {
   }
 
   async function downloadDOCX() {
-    const docxHtml = await generateDocxHTML(); // Use Word‑friendly HTML
+    const docxHtml = await generateDocxHTML();
     const blob = asBlob(docxHtml);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
