@@ -86,18 +86,29 @@ export default function PDFGenerator({ students, filters, staffUser, reportType,
       y += 9;
 
       // Info lines
-      doc.setFont('times', 'bold');
-      doc.setFontSize(10);
-      doc.text(`Dept.: ${dept}`, margin, y);
-      y += 6;
-      doc.text(`Batch: ${batchVal}`, margin, y);
-      y += 6;
-      doc.text(
-        `Semester: ${semVal}${semOddEven ? ` (${semOddEven})` : ''}`,
-        margin,
-        y
-      );
-      y += 10;
+      // Info lines
+doc.setFont('times', 'bold');
+doc.setFontSize(10);
+doc.text(`Dept.: ${dept}`, margin, y);
+y += 6;
+doc.text(`Batch: ${batchVal}`, margin, y);
+y += 6;
+doc.text(
+  `Semester: ${semVal}${semOddEven ? ` (${semOddEven})` : ''}`,
+  margin,
+  y
+);
+y += 6;
+
+// Date range filter if applied
+if (filters.dateFrom || filters.dateTo) {
+  const fromStr = filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString('en-GB') : 'Start';
+  const toStr = filters.dateTo ? new Date(filters.dateTo).toLocaleDateString('en-GB') : 'End';
+  doc.text(`Date Range: ${fromStr} – ${toStr}`, margin, y);
+  y += 6;
+}
+
+y += 4; // small extra spacing before table
 
       // Build table rows
       const isCert = reportType === 'certificates';

@@ -30,6 +30,8 @@ export async function POST(request) {
     const techStack = formData.get('techStack') || '';
     const issuedBy = formData.get('issuedBy') || '';
     const semester = formData.get('semester');
+    const fromDate = formData.get('fromDate');
+    const toDate = formData.get('toDate');
     // Get all files (multiple)
     const files = formData.getAll('files');
 
@@ -119,6 +121,14 @@ export async function POST(request) {
       }
     }
 
+    // Add participation date for certificates
+    if (type === 'certificate' && fromDate) {
+      postData.participationDate = { from: new Date(fromDate) };
+      if (toDate) {
+        postData.participationDate.to = new Date(toDate);
+      }
+    }
+
     if (type === 'certificate') {
       postData.issuedBy = issuedBy || 'Self';
       if (tags) {
@@ -149,6 +159,7 @@ export async function POST(request) {
           description: post.description,
           type: post.type,
           semester: post.semester,
+          participationDate: post.participationDate,
           media: post.media,
           issuedBy: post.issuedBy,
           tags: post.tags || [],

@@ -458,7 +458,6 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
 
 // ===================== ImageModal with swipe support (NO DARK BACKGROUND, ONLY BLUR) =====================
 function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
-  // All hooks must be called unconditionally at the top
   const [currentIndex, setCurrentIndex] = useState(initialImageIndex);
   const [isClosing, setIsClosing] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
@@ -471,12 +470,10 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
   const images = item ? (type === 'certificate' ? (item.media?.length ? item.media : [{ url: item.imageUrl }]) : item.media || []) : [];
   const total = images.length;
 
-  // Update current index when item or initialImageIndex changes
   useEffect(() => {
     setCurrentIndex(initialImageIndex);
   }, [item, initialImageIndex]);
 
-  // Close handler (defined early, used in effects)
   const handleClose = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
@@ -485,7 +482,6 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
     }, 200);
   }, [onClose]);
 
-  // Escape key listener
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') handleClose();
@@ -494,7 +490,6 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, handleClose]);
 
-  // Swipe navigation handlers
   const next = useCallback(() => {
     if (total === 0) return;
     setCurrentIndex((prev) => (prev + 1) % total);
@@ -558,7 +553,6 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
     setDragOffset(0);
   }, [isDragging, touchEnd, touchStart, prev, next, total]);
 
-  // Global mouseup cleanup
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDragging) handleMouseUp();
@@ -567,7 +561,6 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isDragging, handleMouseUp]);
 
-  // If modal is completely closed, render nothing (after all hooks)
   if (!isOpen && !isClosing) return null;
 
   const currentImage = images[currentIndex]?.url;
@@ -585,7 +578,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem',
-        background: 'transparent', // No dark background, only blur
+        background: 'transparent',
         backdropFilter: 'blur(12px)',
         animation: isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out',
       }}
@@ -769,8 +762,14 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
               </p>
             )}
             {item?.semester && (
-              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 10, marginTop: 0 }}>
+              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
                 Semester {item.semester}
+              </p>
+            )}
+            {type === 'certificate' && item?.participationDate?.from && (
+              <p style={{ color: '#10B981', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
+                {new Date(item.participationDate.from).toLocaleDateString('en-GB')}
+                {item.participationDate.to && ` – ${new Date(item.participationDate.to).toLocaleDateString('en-GB')}`}
               </p>
             )}
             <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
@@ -1339,8 +1338,8 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
   );
 }
 
-// ==================== CertificateSection ====================
-function CertificateSection({ userId, isOwnProfile, showAlert }) {
+// ==================== CertificateSection (Simple List + Word Export with Embedded Images) ====================
+function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedInUser }) {
   const [certificates, setCertificates] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1354,6 +1353,10 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
   const [editItem, setEditItem] = useState(null);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [closingDropdownId, setClosingDropdownId] = useState(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [isDateRange, setIsDateRange] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchCertificates();
@@ -1395,6 +1398,14 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
       showAlert('Please fill all required fields', 'error');
       return;
     }
+    if (!fromDate) {
+      showAlert('Please select participation date', 'error');
+      return;
+    }
+    if (isDateRange && toDate && new Date(toDate) < new Date(fromDate)) {
+      showAlert('End date cannot be earlier than start date', 'error');
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -1406,6 +1417,9 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
       fd.append('tags', formData.tags);
       fd.append('semester', formData.semester);
       fd.append('files', selectedFile);
+      fd.append('fromDate', fromDate);
+      if (isDateRange && toDate) fd.append('toDate', toDate);
+
       const response = await fetch('/api/posts/upload', { method: 'POST', body: fd });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -1413,6 +1427,9 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
         setShowForm(false);
         setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' });
         clearFile();
+        setFromDate('');
+        setToDate('');
+        setIsDateRange(false);
         showAlert('Certificate uploaded!', 'success');
       } else {
         showAlert('Upload failed: ' + (data.error || 'Unknown error'), 'error');
@@ -1476,6 +1493,268 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
     }
   };
 
+  // Helper to convert image URL to base64 (for embedding in Word)
+  const imageToBase64 = async (url) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  // ===================== WORD EXPORT (fixed for Word/WPS compatibility) =====================
+  const exportToWord = async () => {
+    setExporting(true);
+    try {
+      // Fetch logo as base64
+      let logoBase64 = '';
+      try {
+        const res = await fetch('/logo.png');
+        if (res.ok) {
+          const blob = await res.blob();
+          logoBase64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (_) {}
+
+      // Fetch all certificate images as base64
+      const certsWithImages = await Promise.all(
+        certificates.map(async (cert) => {
+          let imageBase64 = '';
+          const imgUrl = cert.media?.[0]?.url;
+          if (imgUrl) {
+            imageBase64 = await imageToBase64(imgUrl);
+          }
+          return { ...cert, imageBase64 };
+        })
+      );
+
+      // Sort by semester (ascending)
+      const sorted = [...certsWithImages].sort((a, b) => (a.semester || 1) - (b.semester || 1));
+
+      const dept = student?.department || 'Computer Science and Engineering';
+      const studentName = student?.name || 'N/A';
+      const studentRegNo = student?.registerNumber || 'N/A';
+      const studentBatch = student?.batchYear || 'N/A';
+
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('en-GB');
+      };
+
+      const escapeHtml = (text) => {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function (m) {
+          if (m === '&') return '&amp;';
+          if (m === '<') return '&lt;';
+          if (m === '>') return '&gt;';
+          return m;
+        });
+      };
+
+      let html = `
+  <html xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:w="urn:schemas-microsoft-com:office:word"
+        xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+  <meta charset="UTF-8">
+  <title>Certificate Report – ${escapeHtml(studentName)}</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page WordSection1 {
+      size: 595.3pt 841.9pt;
+      margin: 42.5pt 42.5pt 42.5pt 42.5pt;
+      mso-header-margin: 21.25pt;
+      mso-footer-margin: 21.25pt;
+      mso-paper-source: 0;
+    }
+    div.WordSection1 { page: WordSection1; }
+
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 11pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    table.header-table {
+      width: 100%;
+      border: none;
+      border-collapse: collapse;
+      margin-bottom: 8pt;
+    }
+    table.header-table td {
+      border: none;
+      padding: 0;
+      vertical-align: middle;
+    }
+    .logo-cell {
+      width: 60pt;
+      text-align: left;
+      padding-right: 10pt !important;
+    }
+    .text-cell { text-align: center; }
+
+    .college-name { font-size: 16pt; font-weight: bold; }
+    .subtitle     { font-size: 9pt; }
+    .address      { font-size: 9pt; font-weight: bold; }
+    .dept-title   { font-size: 12pt; font-weight: bold; text-align: center; margin-top: 6pt; }
+
+    .student-info {
+      padding: 6pt 0;
+      margin: 12pt 0;
+      font-size: 10pt;
+    }
+
+    table.cert-table {
+      width: 510pt;
+      border-collapse: collapse;
+      margin-top: 10pt;
+      table-layout: fixed;
+    }
+    table.cert-table th,
+    table.cert-table td {
+      border: 1pt solid #999;
+      padding: 4pt 5pt;
+      vertical-align: middle;
+      overflow: hidden;
+      word-wrap: break-word;
+      font-size: 9.5pt;
+    }
+    table.cert-table th {
+      background: transparent;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+  </head>
+  <body>
+  <div class="WordSection1">
+
+    <table class="header-table">
+      <tr>
+        ${logoBase64
+          ? `<td class="logo-cell">
+               <img src="${logoBase64}" width="55" height="55"
+                    style="width:55pt;height:55pt;object-fit:contain;" />
+             </td>`
+          : ''}
+        <td class="text-cell">
+          <div class="college-name">JAYARAJ ANNAPACKIAM CSI COLLEGE OF ENGINEERING</div>
+          <div class="subtitle">(Approved by AICTE, New Delhi and Affiliated to Anna University)</div>
+          <div class="address">MARGOSCHIS NAGAR, NAZARETH – 628 617</div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="dept-title">DEPARTMENT OF ${escapeHtml(dept.toUpperCase())}</div>
+    <div class="dept-title">CERTIFICATE REPORT</div>
+
+    <div class="student-info">
+      <strong>Student Name:</strong> ${escapeHtml(studentName)}<br>
+      <strong>Register Number:</strong> ${escapeHtml(studentRegNo)}<br>
+      <strong>Department:</strong> ${escapeHtml(dept)}<br>
+      <strong>Batch Year:</strong> ${escapeHtml(String(studentBatch))}
+    </div>
+  `;
+
+      if (sorted.length === 0) {
+        html += `<p style="text-align:center;">No certificates uploaded.</p>`;
+      } else {
+        html += `
+        <table class="cert-table">
+          <colgroup>
+            <col style="width:25pt"  />
+            <col style="width:30pt"  />
+            <col style="width:135pt" />
+            <col style="width:95pt"  />
+            <col style="width:90pt"  />
+            <col style="width:75pt"  />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Semester</th>
+              <th>Certificate Title</th>
+              <th>Issued By</th>
+              <th>Participation Date</th>
+              <th>Preview</th>
+            </tr>
+          </thead>
+          <tbody>
+        `;
+
+        sorted.forEach((cert, idx) => {
+          const participation = cert.participationDate?.from
+            ? formatDate(cert.participationDate.from) +
+              (cert.participationDate.to ? ` – ${formatDate(cert.participationDate.to)}` : '')
+            : 'Not specified';
+
+          const imgTag = cert.imageBase64
+            ? `<img src="${cert.imageBase64}" width="80" height="58"
+                    style="width:80pt;height:58pt;object-fit:cover;display:block;margin:0 auto;" />`
+            : 'No image';
+
+          html += `
+            <tr>
+              <td style="text-align:center">${idx + 1}</td>
+              <td style="text-align:center">${escapeHtml(String(cert.semester || '—'))}</td>
+              <td>${escapeHtml(cert.title || 'Untitled')}</td>
+              <td>${escapeHtml(cert.issuedBy || '—')}</td>
+              <td>${participation}</td>
+              <td style="text-align:center">${imgTag}</td>
+            </tr>
+          `;
+        });
+
+        html += `</tbody></table>`;
+      }
+
+      // Footer removed as requested
+      html += `
+  </div>
+  </body>
+  </html>`;
+
+      const blob = new Blob(['\ufeff', html], {
+        type: 'application/vnd.ms-word;charset=utf-8',
+      });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `${studentRegNo}_Certificates.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showAlert('Word document downloaded!', 'success');
+    } catch (error) {
+      console.error('Word export error:', error);
+      showAlert('Failed to generate Word document', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleDropdown = (id) => {
     if (activeDropdownId === id) {
       setClosingDropdownId(id);
@@ -1494,46 +1773,46 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
     };
   }, [previewUrl]);
 
-  if (loading)
+  if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            border: '2px solid #222634',
-            borderTopColor: '#7C5CFF',
-            animation: 'spin 0.8s linear infinite',
-            margin: '0 auto',
-          }}
-        />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #222634', borderTopColor: '#7C5CFF', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
       </div>
     );
+  }
 
   return (
     <>
-      {isOwnProfile && !showForm && (
-        <div style={{ marginBottom: 20, textAlign: 'center' }}>
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        {isOwnProfile && !showForm && (
           <button onClick={() => setShowForm(true)} className="action-btn-primary">
             + Add Certificate
           </button>
-        </div>
-      )}
+        )}
+        {(loggedInUser?.role === 'staff' || loggedInUser?.role === 'admin') && certificates.length > 0 && (
+          <button onClick={exportToWord} disabled={exporting} className="action-btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {exporting ? (
+              <>
+                <div style={{ width: 14, height: 14, border: '2px solid #9CA3AF', borderTopColor: '#7C5CFF', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                Generating...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Word Report
+              </>
+            )}
+          </button>
+        )}
+      </div>
 
+      {/* Upload Form */}
       {showForm && (
-        <div
-          style={{
-            background: '#171B24',
-            border: '1px solid #222634',
-            borderRadius: 12,
-            padding: '1.5rem',
-            marginBottom: 20,
-          }}
-        >
-          <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>
-            Upload Certificate
-          </p>
+        <div style={{ background: '#171B24', border: '1px solid #222634', borderRadius: 12, padding: '1.5rem', marginBottom: 20 }}>
+          <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Upload Certificate</p>
           <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { label: 'Title *', key: 'title', placeholder: 'Web Development Certification' },
@@ -1541,183 +1820,62 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
               { label: 'Tags', key: 'tags', placeholder: 'React, Frontend, Web Dev' },
             ].map(({ label, key, placeholder }) => (
               <div key={key}>
-                <span
-                  style={{
-                    color: '#6B7280',
-                    fontSize: 11,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    display: 'block',
-                    marginBottom: 6,
-                  }}
-                >
-                  {label}
-                </span>
-                <input
-                  type="text"
-                  value={formData[key]}
-                  onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                  placeholder={placeholder}
-                  className="profile-input"
-                />
+                <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{label}</span>
+                <input type="text" value={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.value })} placeholder={placeholder} className="profile-input" />
               </div>
             ))}
             <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Description *
-              </span>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the certificate…"
-                className="profile-input"
-                rows={3}
-                style={{ resize: 'vertical' }}
-              />
+              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Description *</span>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Describe the certificate…" className="profile-input" rows={3} style={{ resize: 'vertical' }} />
             </div>
             <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Semester *
-              </span>
-              <select
-                value={formData.semester}
-                onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                className="profile-input"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                  <option key={s} value={s}>
-                    Semester {s}
-                  </option>
-                ))}
+              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Semester *</span>
+              <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="profile-input">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (<option key={s} value={s}>Semester {s}</option>))}
               </select>
             </div>
             <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Image *
-              </span>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: '#0B0D12',
-                  border: '1px solid #222634',
-                  borderRadius: 8,
-                  padding: '8px 14px',
-                  cursor: 'pointer',
-                  color: '#9CA3AF',
-                  fontSize: 13,
-                }}
-              >
+              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Participation Date *</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: '#7C5CFF' }} />
+                  Date range (from – to)
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="profile-input" required style={{ flex: 1 }} />
+                {isDateRange && <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="profile-input" style={{ flex: 1 }} />}
+              </div>
+              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
+            </div>
+            <div>
+              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Image *</span>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
                 {selectedFile ? selectedFile.name.substring(0, 24) + '…' : 'Choose File'}
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                  accept=".jpg,.jpeg,.png,.gif,.webp"
-                />
+                <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".jpg,.jpeg,.png,.gif,.webp" />
               </label>
               {selectedFile && (
-                <button
-                  type="button"
-                  onClick={clearFile}
-                  style={{
-                    marginLeft: 10,
-                    background: 'none',
-                    border: 'none',
-                    color: '#EF4444',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Remove
-                </button>
+                <button type="button" onClick={clearFile} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#EF4444', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
               )}
-              {previewUrl && (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  style={{
-                    display: 'block',
-                    maxHeight: 100,
-                    marginTop: 10,
-                    borderRadius: 8,
-                    border: '1px solid #222634',
-                  }}
-                />
-              )}
+              {previewUrl && <img src={previewUrl} alt="Preview" style={{ display: 'block', maxHeight: 100, marginTop: 10, borderRadius: 8, border: '1px solid #222634' }} />}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="submit"
-                disabled={uploading}
-                className="action-btn-primary"
-                style={{ opacity: uploading ? 0.6 : 1 }}
-              >
-                {uploading ? 'Uploading…' : 'Upload'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  clearFile();
-                  setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' });
-                }}
-                className="action-btn-ghost"
-              >
-                Cancel
-              </button>
+              <button type="submit" disabled={uploading} className="action-btn-primary" style={{ opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Uploading…' : 'Upload'}</button>
+              <button type="button" onClick={() => { setShowForm(false); clearFile(); setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' }); setFromDate(''); setToDate(''); setIsDateRange(false); }} className="action-btn-ghost">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
+      {/* Simple list of certificates (no semester grouping) */}
       {certificates.length === 0 ? (
         <EmptyState
           icon={
             <svg width="22" height="22" fill="none" stroke="#6B7280" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           }
           title="No Certificates Yet"
@@ -1731,150 +1889,51 @@ function CertificateSection({ userId, isOwnProfile, showAlert }) {
             <div key={cert._id} className="cert-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
-                  <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>
-                    {cert.title || 'Untitled'}
-                  </p>
-                  {cert.semester && (
-                    <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>
-                  )}
+                  <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{cert.title || 'Untitled'}</p>
+                  {cert.semester && <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>}
                 </div>
                 {isOwnProfile && (
                   <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => toggleDropdown(cert._id)}
-                      className="delete-btn"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}
-                    >
-                      ⋮
-                    </button>
+                    <button onClick={() => toggleDropdown(cert._id)} className="delete-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}>⋮</button>
                     {(activeDropdownId === cert._id || closingDropdownId === cert._id) && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 24,
-                          background: '#171B24',
-                          border: '1px solid #222634',
-                          borderRadius: 8,
-                          zIndex: 10,
-                          minWidth: 90,
-                          animation: closingDropdownId === cert._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out',
-                        }}
-                      >
-                        <button
-                          onClick={() => handleEdit(cert)}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '6px 16px',
-                            background: 'none',
-                            border: 'none',
-                            color: '#E5E7EB',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontSize: 13,
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDownload(cert)}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '6px 16px',
-                            background: 'none',
-                            border: 'none',
-                            color: '#E5E7EB',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontSize: 13,
-                          }}
-                        >
-                          Download
-                        </button>
-                        <button
-                          onClick={() => handleDelete(cert._id)}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '6px 16px',
-                            background: 'none',
-                            border: 'none',
-                            color: '#EF4444',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontSize: 13,
-                          }}
-                        >
-                          Delete
-                        </button>
+                      <div style={{ position: 'absolute', right: 0, top: 24, background: '#171B24', border: '1px solid #222634', borderRadius: 8, zIndex: 10, minWidth: 90, animation: closingDropdownId === cert._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out' }}>
+                        <button onClick={() => handleEdit(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#E5E7EB', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Edit</button>
+                        <button onClick={() => handleDownload(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#E5E7EB', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Download</button>
+                        <button onClick={() => handleDelete(cert._id)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Delete</button>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              {cert.issuedBy && (
-                <p style={{ color: '#7C5CFF', fontSize: 13, margin: '0 0 4px' }}>{cert.issuedBy}</p>
-              )}
-              <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
-                {cert.description}
-              </p>
+              {cert.issuedBy && <p style={{ color: '#7C5CFF', fontSize: 13, margin: '0 0 4px' }}>{cert.issuedBy}</p>}
+              <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>{cert.description}</p>
               {cert.media?.[0]?.url && (
-                <div
-                  style={{ marginBottom: 10, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }}
-                  onClick={() => {
-                    setSelectedCertificate(cert);
-                    setModalOpen(true);
-                  }}
-                >
-                  <img
-                    src={cert.media[0].url}
-                    alt={cert.title}
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      display: 'block',
-                      borderRadius: 8,
-                      transition: 'transform 0.3s',
-                    }}
-                    onMouseOver={(e) => (e.target.style.transform = 'scale(1.02)')}
-                    onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
-                  />
+                <div style={{ marginBottom: 10, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }} onClick={() => { setSelectedCertificate(cert); setModalOpen(true); }}>
+                  <img src={cert.media[0].url} alt={cert.title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8, transition: 'transform 0.3s' }} onMouseOver={(e) => (e.target.style.transform = 'scale(1.02)')} onMouseOut={(e) => (e.target.style.transform = 'scale(1)')} />
                 </div>
               )}
               {cert.tags?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
-                  {cert.tags.map((tag, i) => (
-                    <span key={i} className="tag-chip" style={{ fontSize: 10 }}>
-                      #{tag}
-                    </span>
-                  ))}
+                  {cert.tags.map((tag, i) => (<span key={i} className="tag-chip" style={{ fontSize: 10 }}>#{tag}</span>))}
                 </div>
               )}
-              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
-                {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString() : 'Recent'}
-              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Posted: {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString('en-GB') : 'Recent'}</p>
+                {cert.participationDate?.from && (
+                  <p style={{ color: '#10B981', fontSize: 11, margin: 0, fontWeight: 500 }}>
+                    {new Date(cert.participationDate.from).toLocaleDateString('en-GB')}
+                    {cert.participationDate.to && ` – ${new Date(cert.participationDate.to).toLocaleDateString('en-GB')}`}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      <ImageModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        item={selectedCertificate}
-        type="certificate"
-      />
-
-      <EditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        item={editItem}
-        type="certificate"
-        onSave={handleEditSave}
-        showAlert={showAlert}
-      />
+      {/* Modals */}
+      <ImageModal isOpen={modalOpen} onClose={() => setModalOpen(false)} item={selectedCertificate} type="certificate" />
+      <EditModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} item={editItem} type="certificate" onSave={handleEditSave} showAlert={showAlert} />
       <style jsx>{`
         @keyframes dropdownIn {
           from { opacity: 0; transform: scale(0.9) translateY(-5px); }
@@ -2493,6 +2552,11 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
   const [uploading, setUploading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
+  // Participation date state
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [isDateRange, setIsDateRange] = useState(false);
+
   useEffect(() => {
     if (item) {
       setFormData({
@@ -2505,6 +2569,24 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
       });
       setSelectedFiles([]);
       setPreviewUrls([]);
+
+      // Initialize participation date if exists
+      if (item.participationDate?.from) {
+        const from = new Date(item.participationDate.from);
+        setFromDate(from.toISOString().split('T')[0]);
+        if (item.participationDate.to) {
+          const to = new Date(item.participationDate.to);
+          setToDate(to.toISOString().split('T')[0]);
+          setIsDateRange(true);
+        } else {
+          setToDate('');
+          setIsDateRange(false);
+        }
+      } else {
+        setFromDate('');
+        setToDate('');
+        setIsDateRange(false);
+      }
     }
   }, [item]);
 
@@ -2533,6 +2615,14 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (type === 'certificate' && !fromDate) {
+      showAlert('Please select participation date', 'error');
+      return;
+    }
+    if (isDateRange && toDate && new Date(toDate) < new Date(fromDate)) {
+      showAlert('End date cannot be earlier than start date', 'error');
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -2542,6 +2632,13 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
       if (type === 'certificate') {
         fd.append('issuedBy', formData.issuedBy);
         fd.append('tags', formData.tags);
+        // Append participation dates
+        if (fromDate) {
+          fd.append('fromDate', fromDate);
+          if (isDateRange && toDate) {
+            fd.append('toDate', toDate);
+          }
+        }
       } else {
         fd.append('techStack', formData.techStack);
         fd.append('tags', formData.tags);
@@ -2737,6 +2834,56 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
               ))}
             </select>
           </div>
+
+          {/* Participation Date Section (only for certificates) */}
+          {type === 'certificate' && (
+            <div>
+              <span
+                style={{
+                  color: '#6B7280',
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  display: 'block',
+                  marginBottom: 6,
+                }}
+              >
+                Participation Date *
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={isDateRange}
+                    onChange={(e) => setIsDateRange(e.target.checked)}
+                    style={{ accentColor: '#7C5CFF' }}
+                  />
+                  Date range (from – to)
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="profile-input"
+                  required
+                  style={{ flex: 1 }}
+                />
+                {isDateRange && (
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="profile-input"
+                    style={{ flex: 1 }}
+                  />
+                )}
+              </div>
+              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>
+                Format: DD/MM/YYYY
+              </p>
+            </div>
+          )}
 
           <div>
             <span
@@ -3416,7 +3563,13 @@ export default function ProfilePage() {
             </div>
             <div style={{ padding: '1.75rem' }}>
               {activeTab === 'certificates' && (
-                <CertificateSection userId={user._id} isOwnProfile={isOwnProfile} showAlert={showAlert} />
+                <CertificateSection
+                  userId={user._id}
+                  isOwnProfile={isOwnProfile}
+                  showAlert={showAlert}
+                  student={user}
+                  loggedInUser={loggedInUser}
+                />
               )}
               {activeTab === 'projects' && (
                 <ProjectSection userId={user._id} isOwnProfile={isOwnProfile} showAlert={showAlert} />

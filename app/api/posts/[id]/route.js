@@ -113,6 +113,8 @@ export async function PUT(request, { params }) {
     const techStack = formData.get('techStack') || '';
     const issuedBy = formData.get('issuedBy') || '';
     const semester = formData.get('semester');
+    const fromDate = formData.get('fromDate');     // 👈 ADD
+    const toDate = formData.get('toDate');         // 👈 ADD
     const files = formData.getAll('files'); // new images (optional)
 
     if (!title || !description) {
@@ -141,6 +143,14 @@ export async function PUT(request, { params }) {
     if (post.type === 'certificate') {
       post.issuedBy = issuedBy || 'Self';
       post.tags = tags.split(',').map(t => t.trim()).filter(Boolean);
+
+      // 👇 NEW: Update participation date
+      if (fromDate) {
+        post.participationDate = post.participationDate || {};
+        post.participationDate.from = new Date(fromDate);
+        post.participationDate.to = toDate ? new Date(toDate) : undefined;
+      }
+      // (If no fromDate is sent, keep existing date; do not clear)
     } else if (post.type === 'project') {
       post.techStack = techStack.split(',').map(t => t.trim()).filter(Boolean);
       post.tags = tags.split(',').map(t => t.trim()).filter(Boolean);
