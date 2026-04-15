@@ -1510,250 +1510,269 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
 
   // ===================== WORD EXPORT (fixed for Word/WPS compatibility) =====================
   const exportToWord = async () => {
-    setExporting(true);
-    try {
-      // Fetch logo as base64
-      let logoBase64 = '';
+  setExporting(true);
+  try {
+    const {
+      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      ImageRun, AlignmentType, WidthType, BorderStyle, ShadingType,
+      VerticalAlign, HeadingLevel,
+    } = await import('docx');
+    const { saveAs } = await import('file-saver');
+
+    // ── Helper: fetch URL → ArrayBuffer ───────────────────────────────────
+    const fetchBuffer = async (url) => {
       try {
-        const res = await fetch('/logo.png');
-        if (res.ok) {
-          const blob = await res.blob();
-          logoBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-        }
-      } catch (_) {}
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        return await res.arrayBuffer();
+      } catch { return null; }
+    };
 
-      // Fetch all certificate images as base64
-      const certsWithImages = await Promise.all(
-        certificates.map(async (cert) => {
-          let imageBase64 = '';
-          const imgUrl = cert.media?.[0]?.url;
-          if (imgUrl) {
-            imageBase64 = await imageToBase64(imgUrl);
-          }
-          return { ...cert, imageBase64 };
-        })
-      );
+    // ── Fetch logo ────────────────────────────────────────────────────────
+    const logoBuffer = await fetchBuffer('/logo.png');
 
-      // Sort by semester (ascending)
-      const sorted = [...certsWithImages].sort((a, b) => (a.semester || 1) - (b.semester || 1));
+    // ── Fetch all certificate images ──────────────────────────────────────
+    const certsWithImages = await Promise.all(
+      certificates.map(async (cert) => {
+        const imgUrl = cert.media?.[0]?.url;
+        const imgBuffer = imgUrl ? await fetchBuffer(imgUrl) : null;
+        return { ...cert, imgBuffer };
+      })
+    );
 
-      const dept = student?.department || 'Computer Science and Engineering';
-      const studentName = student?.name || 'N/A';
-      const studentRegNo = student?.registerNumber || 'N/A';
-      const studentBatch = student?.batchYear || 'N/A';
+    const sorted = [...certsWithImages].sort(
+      (a, b) => (a.semester || 1) - (b.semester || 1)
+    );
 
-      const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return d.toLocaleDateString('en-GB');
-      };
+    const dept        = student?.department || 'Computer Science and Engineering';
+    const studentName = student?.name       || 'N/A';
+    const studentReg  = student?.registerNumber || 'N/A';
+    const studentBatch= student?.batchYear  || 'N/A';
 
-      const escapeHtml = (text) => {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function (m) {
-          if (m === '&') return '&amp;';
-          if (m === '<') return '&lt;';
-          if (m === '>') return '&gt;';
-          return m;
-        });
-      };
+    const formatDate = (val) => {
+      if (!val) return '';
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+    };
 
-      let html = `
-  <html xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:w="urn:schemas-microsoft-com:office:word"
-        xmlns="http://www.w3.org/TR/REC-html40">
-  <head>
-  <meta charset="UTF-8">
-  <title>Certificate Report – ${escapeHtml(studentName)}</title>
-  <!--[if gte mso 9]>
-  <xml>
-    <w:WordDocument>
-      <w:View>Print</w:View>
-      <w:Zoom>100</w:Zoom>
-    </w:WordDocument>
-  </xml>
-  <![endif]-->
-  <style>
-    @page WordSection1 {
-      size: 595.3pt 841.9pt;
-      margin: 42.5pt 42.5pt 42.5pt 42.5pt;
-      mso-header-margin: 21.25pt;
-      mso-footer-margin: 21.25pt;
-      mso-paper-source: 0;
-    }
-    div.WordSection1 { page: WordSection1; }
+    // ── Shared border/style helpers ───────────────────────────────────────
+    const border = { style: BorderStyle.SINGLE, size: 4, color: '999999' };
+    const borders = { top: border, bottom: border, left: border, right: border };
+    const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
-    body {
-      font-family: 'Times New Roman', Times, serif;
-      font-size: 11pt;
-      margin: 0;
-      padding: 0;
-    }
+    const cell = (children, opts = {}) =>
+  new TableCell({
+    borders: opts.noBorder ? noBorders : borders,
+    width:   { size: opts.width ?? 1500, type: WidthType.DXA },
+    shading: opts.fill
+      ? { fill: opts.fill, type: ShadingType.CLEAR }
+      : { type: ShadingType.NIL },
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    verticalAlign: VerticalAlign.CENTER,
+    ...(opts.colSpan ? { columnSpan: opts.colSpan } : {}),
+    children,
+  });
 
-    table.header-table {
-      width: 100%;
-      border: none;
-      border-collapse: collapse;
-      margin-bottom: 8pt;
-    }
-    table.header-table td {
-      border: none;
-      padding: 0;
-      vertical-align: middle;
-    }
-    .logo-cell {
-      width: 60pt;
-      text-align: left;
-      padding-right: 10pt !important;
-    }
-    .text-cell { text-align: center; }
-
-    .college-name { font-size: 16pt; font-weight: bold; }
-    .subtitle     { font-size: 9pt; }
-    .address      { font-size: 9pt; font-weight: bold; }
-    .dept-title   { font-size: 12pt; font-weight: bold; text-align: center; margin-top: 6pt; }
-
-    .student-info {
-      padding: 6pt 0;
-      margin: 12pt 0;
-      font-size: 10pt;
-    }
-
-    table.cert-table {
-      width: 510pt;
-      border-collapse: collapse;
-      margin-top: 10pt;
-      table-layout: fixed;
-    }
-    table.cert-table th,
-    table.cert-table td {
-      border: 1pt solid #999;
-      padding: 4pt 5pt;
-      vertical-align: middle;
-      overflow: hidden;
-      word-wrap: break-word;
-      font-size: 9.5pt;
-    }
-    table.cert-table th {
-      background: transparent;
-      font-weight: bold;
-      text-align: center;
-    }
-  </style>
-  </head>
-  <body>
-  <div class="WordSection1">
-
-    <table class="header-table">
-      <tr>
-        ${logoBase64
-          ? `<td class="logo-cell">
-               <img src="${logoBase64}" width="55" height="55"
-                    style="width:55pt;height:55pt;object-fit:contain;" />
-             </td>`
-          : ''}
-        <td class="text-cell">
-          <div class="college-name">JAYARAJ ANNAPACKIAM CSI COLLEGE OF ENGINEERING</div>
-          <div class="subtitle">(Approved by AICTE, New Delhi and Affiliated to Anna University)</div>
-          <div class="address">MARGOSCHIS NAGAR, NAZARETH – 628 617</div>
-        </td>
-      </tr>
-    </table>
-
-    <div class="dept-title">DEPARTMENT OF ${escapeHtml(dept.toUpperCase())}</div>
-    <div class="dept-title">CERTIFICATE REPORT</div>
-
-    <div class="student-info">
-      <strong>Student Name:</strong> ${escapeHtml(studentName)}<br>
-      <strong>Register Number:</strong> ${escapeHtml(studentRegNo)}<br>
-      <strong>Department:</strong> ${escapeHtml(dept)}<br>
-      <strong>Batch Year:</strong> ${escapeHtml(String(studentBatch))}
-    </div>
-  `;
-
-      if (sorted.length === 0) {
-        html += `<p style="text-align:center;">No certificates uploaded.</p>`;
-      } else {
-        html += `
-        <table class="cert-table">
-          <colgroup>
-            <col style="width:25pt"  />
-            <col style="width:30pt"  />
-            <col style="width:135pt" />
-            <col style="width:95pt"  />
-            <col style="width:90pt"  />
-            <col style="width:75pt"  />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>S.No</th>
-              <th>Semester</th>
-              <th>Certificate Title</th>
-              <th>Issued By</th>
-              <th>Participation Date</th>
-              <th>Preview</th>
-            </tr>
-          </thead>
-          <tbody>
-        `;
-
-        sorted.forEach((cert, idx) => {
-          const participation = cert.participationDate?.from
-            ? formatDate(cert.participationDate.from) +
-              (cert.participationDate.to ? ` – ${formatDate(cert.participationDate.to)}` : '')
-            : 'Not specified';
-
-          const imgTag = cert.imageBase64
-            ? `<img src="${cert.imageBase64}" width="80" height="58"
-                    style="width:80pt;height:58pt;object-fit:cover;display:block;margin:0 auto;" />`
-            : 'No image';
-
-          html += `
-            <tr>
-              <td style="text-align:center">${idx + 1}</td>
-              <td style="text-align:center">${escapeHtml(String(cert.semester || '—'))}</td>
-              <td>${escapeHtml(cert.title || 'Untitled')}</td>
-              <td>${escapeHtml(cert.issuedBy || '—')}</td>
-              <td>${participation}</td>
-              <td style="text-align:center">${imgTag}</td>
-            </tr>
-          `;
-        });
-
-        html += `</tbody></table>`;
-      }
-
-      // Footer removed as requested
-      html += `
-  </div>
-  </body>
-  </html>`;
-
-      const blob = new Blob(['\ufeff', html], {
-        type: 'application/vnd.ms-word;charset=utf-8',
+    const para = (text, opts = {}) =>
+      new Paragraph({
+        alignment: opts.align ?? AlignmentType.LEFT,
+        spacing:   { before: opts.before ?? 0, after: opts.after ?? 0 },
+        children: [
+          new TextRun({
+            text: text ?? '',
+            bold:      opts.bold  ?? false,
+            size:      (opts.size ?? 11) * 2,   // half-points
+            font:      'Times New Roman',
+            color:     opts.color ?? 'auto',
+          }),
+        ],
       });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = `${studentRegNo}_Certificates.doc`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
-      showAlert('Word document downloaded!', 'success');
-    } catch (error) {
-      console.error('Word export error:', error);
-      showAlert('Failed to generate Word document', 'error');
-    } finally {
-      setExporting(false);
-    }
-  };
+    const headerPara = (text, size, bold = false) =>
+      para(text, { align: AlignmentType.CENTER, size, bold, before: 20, after: 20 });
+
+    // ── Page constants (A4, 1.5cm margins) ───────────────────────────────
+    // A4: 11906 × 16838 DXA  |  1.5 cm ≈ 851 DXA
+    const MARGIN   = 851;
+    const PAGE_W   = 11906;
+    const CONTENT_W = PAGE_W - MARGIN * 2; // 10204 DXA
+
+    // ── Column widths (DXA) – must sum to CONTENT_W ───────────────────────
+    // S.No | Sem | Title | Issued By | Date | Preview
+    const COL_W = [700, 900, 3004, 2200, 1600, 1800]; // sum = 10204
+
+    // ── HEADER: logo + college name ───────────────────────────────────────
+    const headerRow = new TableRow({
+      children: [
+        // Logo cell
+        cell(
+          logoBuffer
+            ? [new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new ImageRun({
+                  data: logoBuffer, type: 'png',
+                  transformation: { width: 55, height: 55 },
+                })],
+              })]
+            : [para('')],
+          { width: 1000, noBorder: true }
+        ),
+        // College name cell
+        cell(
+          [
+            headerPara('JAYARAJ ANNAPACKIAM CSI COLLEGE OF ENGINEERING', 16, true),
+            headerPara('(Approved by AICTE, New Delhi and Affiliated to Anna University)', 8),
+            headerPara('MARGOSCHIS NAGAR, NAZARETH – 628 617', 9),
+          ],
+          { width: CONTENT_W - 1000, noBorder: true }
+        ),
+      ],
+    });
+
+    const headerTable = new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [1000, CONTENT_W - 1000],
+      borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
+                 left: noBorder, right: noBorder,
+                 insideH: noBorder, insideV: noBorder },
+      rows: [headerRow],
+    });
+
+    // ── Dept + report title ───────────────────────────────────────────────
+    const deptTitle = para(
+      `DEPARTMENT OF ${dept.toUpperCase()}`,
+      { align: AlignmentType.CENTER, bold: true, size: 13, before: 120, after: 40 }
+    );
+    const reportTitle = para('CERTIFICATE REPORT', {
+      align: AlignmentType.CENTER, bold: true, size: 13, after: 120,
+    });
+
+    // ── Student info block ────────────────────────────────────────────────
+    const infoLines = [
+      ['Student Name:',    studentName],
+      ['Register Number:', studentReg],
+      ['Department:',      dept],
+      ['Batch Year:',      String(studentBatch)],
+    ];
+
+    const infoTable = new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, CONTENT_W - 2000],
+      rows: infoLines.map(([label, value]) =>
+        new TableRow({
+          children: [
+            cell([para(label, { bold: true, size: 10 })],
+                 { width: 2000, noBorder: true }),
+            cell([para(value, { size: 10 })],
+                 { width: CONTENT_W - 2000, noBorder: true }),
+          ],
+        })
+      ),
+    });
+
+    // ── Certificate table ─────────────────────────────────────────────────
+    const thCell = (text, w) =>
+      cell([para(text, { bold: true, size: 9, align: AlignmentType.CENTER })],
+           { width: w });
+
+    const headerTableRow = new TableRow({
+      tableHeader: true,
+      children: [
+        thCell('S.No',             COL_W[0]),
+        thCell('Semester',         COL_W[1]),
+        thCell('Certificate Title',COL_W[2]),
+        thCell('Issued By',        COL_W[3]),
+        thCell('Participation Date',COL_W[4]),
+        thCell('Preview',          COL_W[5]),
+      ],
+    });
+
+    const dataRows = sorted.map((cert, idx) => {
+      const participation = cert.participationDate?.from
+        ? formatDate(cert.participationDate.from) +
+          (cert.participationDate.to ? ` – ${formatDate(cert.participationDate.to)}` : '')
+        : 'Not specified';
+
+      // Preview cell: real embedded image or "No image" text
+      const previewChildren = cert.imgBuffer
+        ? [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new ImageRun({
+              data: cert.imgBuffer,
+              type: (() => {
+                const url = cert.media?.[0]?.url ?? '';
+                if (url.includes('.png')) return 'png';
+                if (url.includes('.webp')) return 'webp';
+                if (url.includes('.gif')) return 'gif';
+                return 'jpg';
+              })(),
+              transformation: { width: 90, height: 65 },
+            })],
+          })]
+        : [para('No image', { align: AlignmentType.CENTER, size: 9 })];
+
+      return new TableRow({
+        children: [
+          cell([para(String(idx + 1), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[0] }),
+          cell([para(String(cert.semester ?? '—'), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[1] }),
+          cell([para(cert.title ?? 'Untitled', { size: 9 })], { width: COL_W[2] }),
+          cell([para(cert.issuedBy ?? '—', { size: 9 })], { width: COL_W[3] }),
+          cell([para(participation, { size: 9, align: AlignmentType.CENTER })], { width: COL_W[4] }),
+          cell(previewChildren, { width: COL_W[5] }),
+        ],
+      });
+    });
+
+    const certTable = new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: COL_W,
+      rows: sorted.length === 0
+        ? [new TableRow({
+            children: [cell(
+              [para('No certificates uploaded.', { align: AlignmentType.CENTER })],
+              { width: CONTENT_W, colSpan: 6 }
+            )],
+          })]
+        : [headerTableRow, ...dataRows],
+    });
+
+    // ── Assemble document ─────────────────────────────────────────────────
+    const doc = new Document({
+      styles: {
+        default: {
+          document: { run: { font: 'Times New Roman', size: 22 } },
+        },
+      },
+      sections: [{
+        properties: {
+          page: {
+            size:   { width: PAGE_W, height: 16838 },
+            margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN },
+          },
+        },
+        children: [
+          headerTable,
+          deptTitle,
+          reportTitle,
+          infoTable,
+          para('', { after: 80 }),   // spacer
+          certTable,
+        ],
+      }],
+    });
+
+    const buffer = await Packer.toBlob(doc);
+    saveAs(buffer, `${studentReg}_Certificates.docx`);
+    showAlert('Word document downloaded!', 'success');
+
+  } catch (error) {
+    console.error('Word export error:', error);
+    showAlert('Failed to generate Word document', 'error');
+  } finally {
+    setExporting(false);
+  }
+};
 
   const toggleDropdown = (id) => {
     if (activeDropdownId === id) {
