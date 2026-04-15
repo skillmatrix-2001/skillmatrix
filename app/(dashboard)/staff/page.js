@@ -570,7 +570,9 @@ export default function StaffDashboard() {
                     <div className="staff-card-col" style={{ padding: '1.25rem', borderRight: '1px solid #222634', background: 'rgba(124,92,255,0.03)' }}>
                       <h3 style={{ color: '#E5E7EB', fontWeight: 700, fontSize: 16, margin: '0 0 4px 0' }}>{student.name}</h3>
                       <p style={{ color: '#9CA3AF', fontSize: 13, fontFamily: 'monospace', margin: '0 0 12px 0' }}>{student.registerNumber}</p>
-                      <span className="batch-highlight">Batch: {student.batchYear || '—'}</span>
+                      <span className="batch-highlight">
+                        Batch: {student.batchYear ? `${student.batchYear} – ${Number(student.batchYear) + 4}` : '—'}
+                      </span>
                     </div>
                     <div className="staff-card-col" style={{ padding: '1.25rem', borderRight: showProjectsColumn ? '1px solid #222634' : 'none' }}>
                       <h4 style={{ color: '#6B7280', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>Certificates ({certs.length})</h4>
