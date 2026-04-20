@@ -232,7 +232,6 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
     setIndex(newIndex);
   }, [images.length, index]);
 
-  // Touch / Mouse swipe handlers
   const handleTouchStart = useCallback((e) => {
     setTouchStart(e.targetTouches[0].clientX);
     setTouchEnd(e.targetTouches[0].clientX);
@@ -300,7 +299,6 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
     onImageClick?.(idx);
   }, [didSwipe, onImageClick]);
 
-  // Cleanup global mouseup
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDragging) handleMouseUp();
@@ -859,6 +857,10 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
       user?.profile?.education?.length > 0
         ? user.profile.education
         : [{ institution: '', degree: '', year: '' }],
+    tenthPercentage: user?.profile?.tenthPercentage || '',
+    twelfthPercentage: user?.profile?.twelfthPercentage || '',
+    cgpa: user?.profile?.cgpa || '',
+    cgpaSemester: user?.profile?.cgpaSemester || '',
   });
 
   const addExperience = () =>
@@ -923,6 +925,10 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
                 .filter((s) => s),
               experience: formData.experience.filter((e) => e.company || e.role),
               education: formData.education.filter((e) => e.institution || e.degree),
+              tenthPercentage: formData.tenthPercentage ? Number(formData.tenthPercentage) : undefined,
+              twelfthPercentage: formData.twelfthPercentage ? Number(formData.twelfthPercentage) : undefined,
+              cgpa: formData.cgpa ? Number(formData.cgpa) : undefined,
+              cgpaSemester: formData.cgpaSemester ? Number(formData.cgpaSemester) : undefined,
             },
           },
         }),
@@ -958,38 +964,54 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         user?.profile?.education?.length > 0
           ? user.profile.education
           : [{ institution: '', degree: '', year: '' }],
+      tenthPercentage: user?.profile?.tenthPercentage || '',
+      twelfthPercentage: user?.profile?.twelfthPercentage || '',
+      cgpa: user?.profile?.cgpa || '',
+      cgpaSemester: user?.profile?.cgpaSemester || '',
     });
     setIsEditing(false);
   };
 
   const profile = user?.profile || {};
-
-  // Determine if ResumeButton should be visible: own profile OR any staff
   const showResumeButton = isOwnProfile || loggedInUser?.role === 'staff';
+
+  const getOrdinal = (n) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+  };
+
+  const GitHubIcon = () => (
+    <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+    </svg>
+  );
+
+  const LinkedInIcon = () => (
+    <svg width="15" height="15" fill="#60a5fa" viewBox="0 0 24 24">
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+    </svg>
+  );
+
+  const PortfolioIcon = () => (
+    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  );
 
   return (
     <div>
-      {/* Action row: Edit Resume button + Generate Resume button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 20 }}>
         {isOwnProfile && (
           isEditing ? (
             <>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="action-btn-primary"
-                style={{ opacity: saving ? 0.6 : 1 }}
-              >
+              <button onClick={handleSave} disabled={saving} className="action-btn-primary" style={{ opacity: saving ? 0.6 : 1 }}>
                 {saving ? 'Saving…' : 'Save Resume'}
               </button>
-              <button onClick={handleCancel} className="action-btn-ghost">
-                Cancel
-              </button>
+              <button onClick={handleCancel} className="action-btn-ghost">Cancel</button>
             </>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="action-btn-ghost">
-              Edit Resume
-            </button>
+            <button onClick={() => setIsEditing(true)} className="action-btn-ghost">Edit Resume</button>
           )
         )}
         {showResumeButton && <ResumeButton regNo={regNo} />}
@@ -997,47 +1019,17 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
 
       <Block title="Designation">
         {isEditing ? (
-          <input
-            type="text"
-            value={formData.designation}
-            onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-            placeholder="e.g. Frontend Developer"
-            className="profile-input"
-          />
+          <input type="text" value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} placeholder="e.g. Frontend Developer" className="profile-input" />
         ) : (
-          <p
-            style={{
-              color: profile.designation ? '#E5E7EB' : '#6B7280',
-              fontSize: 14,
-              margin: 0,
-            }}
-          >
-            {profile.designation || 'Not specified'}
-          </p>
+          <p style={{ color: profile.designation ? '#E5E7EB' : '#6B7280', fontSize: 14, margin: 0 }}>{profile.designation || 'Not specified'}</p>
         )}
       </Block>
 
       <Block title="Summary">
         {isEditing ? (
-          <textarea
-            value={formData.summary}
-            onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-            placeholder="Write a short professional summary..."
-            className="profile-input"
-            rows={4}
-            style={{ resize: 'vertical' }}
-          />
+          <textarea value={formData.summary} onChange={(e) => setFormData({ ...formData, summary: e.target.value })} placeholder="Write a short professional summary..." className="profile-input" rows={4} style={{ resize: 'vertical' }} />
         ) : (
-          <p
-            style={{
-              color: profile.summary ? '#9CA3AF' : '#6B7280',
-              fontSize: 14,
-              lineHeight: 1.7,
-              margin: 0,
-            }}
-          >
-            {profile.summary || 'No summary yet.'}
-          </p>
+          <p style={{ color: profile.summary ? '#9CA3AF' : '#6B7280', fontSize: 14, lineHeight: 1.7, margin: 0 }}>{profile.summary || 'No summary yet.'}</p>
         )}
       </Block>
 
@@ -1050,84 +1042,28 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
               { label: 'Portfolio', key: 'portfolio', placeholder: 'https://yoursite.com' },
             ].map(({ label, key, placeholder }) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ color: '#6B7280', fontSize: 12, width: 68, flexShrink: 0 }}>
-                  {label}
-                </span>
-                <input
-                  type="url"
-                  value={formData[key]}
-                  onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                  placeholder={placeholder}
-                  className="profile-input"
-                  style={{ flex: 1 }}
-                />
+                <span style={{ color: '#6B7280', fontSize: 12, width: 68, flexShrink: 0 }}>{label}</span>
+                <input type="url" value={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.value })} placeholder={placeholder} className="profile-input" style={{ flex: 1 }} />
               </div>
             ))}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {profile.github && (
-              <a
-                href={profile.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  color: '#9CA3AF',
-                  fontSize: 13,
-                  textDecoration: 'none',
-                }}
-              >
-                <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
+              <a href={profile.github} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+                <GitHubIcon />
                 {profile.github}
               </a>
             )}
             {profile.linkedin && (
-              <a
-                href={profile.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  color: '#9CA3AF',
-                  fontSize: 13,
-                  textDecoration: 'none',
-                }}
-              >
-                <svg width="15" height="15" fill="#60a5fa" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                </svg>
+              <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+                <LinkedInIcon />
                 {profile.linkedin}
               </a>
             )}
             {profile.portfolio && (
-              <a
-                href={profile.portfolio}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  color: '#9CA3AF',
-                  fontSize: 13,
-                  textDecoration: 'none',
-                }}
-              >
-                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
+              <a href={profile.portfolio} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+                <PortfolioIcon />
                 {profile.portfolio}
               </a>
             )}
@@ -1140,21 +1076,9 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
 
       <Block title="Skills">
         {isEditing ? (
-          <input
-            type="text"
-            value={formData.skills}
-            onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-            placeholder="React, Node.js, Python…"
-            className="profile-input"
-          />
+          <input type="text" value={formData.skills} onChange={(e) => setFormData({ ...formData, skills: e.target.value })} placeholder="React, Node.js, Python…" className="profile-input" />
         ) : profile.skills?.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {profile.skills.map((s, i) => (
-              <span key={i} className="skill-chip">
-                {s}
-              </span>
-            ))}
-          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{profile.skills.map((s, i) => <span key={i} className="skill-chip">{s}</span>)}</div>
         ) : (
           <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No skills added yet.</p>
         )}
@@ -1164,69 +1088,22 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {formData.experience.map((exp, index) => (
-              <div
-                key={index}
-                style={{
-                  background: '#0B0D12',
-                  border: '1px solid #222634',
-                  borderRadius: 10,
-                  padding: 14,
-                }}
-              >
+              <div key={index} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 10, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ color: '#9CA3AF', fontSize: 12 }}>Entry {index + 1}</span>
                   {formData.experience.length > 1 && (
-                    <button onClick={() => removeExperience(index)} className="delete-btn">
-                      Remove
-                    </button>
+                    <button onClick={() => removeExperience(index)} className="delete-btn">Remove</button>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={exp.company}
-                    onChange={(e) => updateExperience(index, 'company', e.target.value)}
-                    placeholder="Company Name"
-                    className="profile-input"
-                  />
-                  <input
-                    type="text"
-                    value={exp.role}
-                    onChange={(e) => updateExperience(index, 'role', e.target.value)}
-                    placeholder="Role / Position"
-                    className="profile-input"
-                  />
-                  <input
-                    type="text"
-                    value={exp.duration}
-                    onChange={(e) => updateExperience(index, 'duration', e.target.value)}
-                    placeholder="Jan 2024 – Mar 2024"
-                    className="profile-input"
-                  />
-                  <textarea
-                    value={exp.description}
-                    onChange={(e) => updateExperience(index, 'description', e.target.value)}
-                    placeholder="What did you do?"
-                    className="profile-input"
-                    rows={2}
-                    style={{ resize: 'vertical' }}
-                  />
+                  <input type="text" value={exp.company} onChange={(e) => updateExperience(index, 'company', e.target.value)} placeholder="Company Name" className="profile-input" />
+                  <input type="text" value={exp.role} onChange={(e) => updateExperience(index, 'role', e.target.value)} placeholder="Role / Position" className="profile-input" />
+                  <input type="text" value={exp.duration} onChange={(e) => updateExperience(index, 'duration', e.target.value)} placeholder="Jan 2024 – Mar 2024" className="profile-input" />
+                  <textarea value={exp.description} onChange={(e) => updateExperience(index, 'description', e.target.value)} placeholder="What did you do?" className="profile-input" rows={2} style={{ resize: 'vertical' }} />
                 </div>
               </div>
             ))}
-            <button
-              onClick={addExperience}
-              style={{
-                background: 'none',
-                border: '1px dashed #222634',
-                borderRadius: 8,
-                padding: '10px',
-                color: '#7C5CFF',
-                fontSize: 13,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={addExperience} style={{ background: 'none', border: '1px dashed #222634', borderRadius: 8, padding: '10px', color: '#7C5CFF', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               + Add Experience
             </button>
           </div>
@@ -1234,18 +1111,10 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {profile.experience.map((exp, i) => (
               <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid rgba(124,92,255,0.3)' }}>
-                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>
-                  {exp.role}
-                </p>
+                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{exp.role}</p>
                 <p style={{ color: '#7C5CFF', fontSize: 13, margin: '0 0 3px' }}>{exp.company}</p>
-                {exp.duration && (
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 6px' }}>{exp.duration}</p>
-                )}
-                {exp.description && (
-                  <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-                    {exp.description}
-                  </p>
-                )}
+                {exp.duration && <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 6px' }}>{exp.duration}</p>}
+                {exp.description && <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, margin: 0 }}>{exp.description}</p>}
               </div>
             ))}
           </div>
@@ -1258,61 +1127,21 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {formData.education.map((edu, index) => (
-              <div
-                key={index}
-                style={{
-                  background: '#0B0D12',
-                  border: '1px solid #222634',
-                  borderRadius: 10,
-                  padding: 14,
-                }}
-              >
+              <div key={index} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 10, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ color: '#9CA3AF', fontSize: 12 }}>Entry {index + 1}</span>
                   {formData.education.length > 1 && (
-                    <button onClick={() => removeEducation(index)} className="delete-btn">
-                      Remove
-                    </button>
+                    <button onClick={() => removeEducation(index)} className="delete-btn">Remove</button>
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={edu.institution}
-                    onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                    placeholder="Institution Name"
-                    className="profile-input"
-                  />
-                  <input
-                    type="text"
-                    value={edu.degree}
-                    onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                    placeholder="Degree / Course"
-                    className="profile-input"
-                  />
-                  <input
-                    type="text"
-                    value={edu.year}
-                    onChange={(e) => updateEducation(index, 'year', e.target.value)}
-                    placeholder="2020 – 2024"
-                    className="profile-input"
-                  />
+                  <input type="text" value={edu.institution} onChange={(e) => updateEducation(index, 'institution', e.target.value)} placeholder="Institution Name" className="profile-input" />
+                  <input type="text" value={edu.degree} onChange={(e) => updateEducation(index, 'degree', e.target.value)} placeholder="Degree / Course" className="profile-input" />
+                  <input type="text" value={edu.year} onChange={(e) => updateEducation(index, 'year', e.target.value)} placeholder="2020 – 2024" className="profile-input" />
                 </div>
               </div>
             ))}
-            <button
-              onClick={addEducation}
-              style={{
-                background: 'none',
-                border: '1px dashed #222634',
-                borderRadius: 8,
-                padding: '10px',
-                color: '#7C5CFF',
-                fontSize: 13,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
+            <button onClick={addEducation} style={{ background: 'none', border: '1px dashed #222634', borderRadius: 8, padding: '10px', color: '#7C5CFF', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               + Add Education
             </button>
           </div>
@@ -1320,13 +1149,9 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {profile.education.map((edu, i) => (
               <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid rgba(34,197,94,0.3)' }}>
-                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>
-                  {edu.degree}
-                </p>
+                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{edu.degree}</p>
                 <p style={{ color: '#22C55E', fontSize: 13, margin: '0 0 3px' }}>{edu.institution}</p>
-                {edu.year && (
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: 0 }}>{edu.year}</p>
-                )}
+                {edu.year && <p style={{ color: '#6B7280', fontSize: 12, margin: 0 }}>{edu.year}</p>}
               </div>
             ))}
           </div>
@@ -1334,17 +1159,77 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
           <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No education added yet.</p>
         )}
       </Block>
+
+      <Block title="Academic Performance">
+        {isEditing ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>10th %</label>
+                <input type="number" min="0" max="100" step="0.1" value={formData.tenthPercentage} onChange={(e) => setFormData({ ...formData, tenthPercentage: e.target.value })} className="profile-input" placeholder="e.g., 89.5" />
+              </div>
+              <div>
+                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>12th %</label>
+                <input type="number" min="0" max="100" step="0.1" value={formData.twelfthPercentage} onChange={(e) => setFormData({ ...formData, twelfthPercentage: e.target.value })} className="profile-input" placeholder="e.g., 92.3" />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>CGPA</label>
+                <input type="number" min="0" max="10" step="0.01" value={formData.cgpa} onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })} className="profile-input" placeholder="e.g., 8.5" />
+              </div>
+              <div>
+                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>Up to Semester</label>
+                <select value={formData.cgpaSemester} onChange={(e) => setFormData({ ...formData, cgpaSemester: e.target.value })} className="profile-input">
+                  <option value="">Select</option>
+                  {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Semester {s}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {(profile.tenthPercentage || profile.twelfthPercentage) && (
+              <div style={{ display: 'flex', gap: 24 }}>
+                {profile.tenthPercentage && <div><span style={{ color: '#6B7280', fontSize: 12 }}>10th: </span><span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>{profile.tenthPercentage}%</span></div>}
+                {profile.twelfthPercentage && <div><span style={{ color: '#6B7280', fontSize: 12 }}>12th: </span><span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>{profile.twelfthPercentage}%</span></div>}
+              </div>
+            )}
+            {profile.cgpa && (
+              <div>
+                <span style={{ color: '#6B7280', fontSize: 12 }}>CGPA: </span>
+                <span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>
+                  {profile.cgpa}
+                  {profile.cgpaSemester && profile.cgpaSemester < 8 
+                    ? ` upto ${profile.cgpaSemester}${getOrdinal(profile.cgpaSemester)} semester`
+                    : ''}
+                </span>
+              </div>
+            )}
+            {!profile.tenthPercentage && !profile.twelfthPercentage && !profile.cgpa && (
+              <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No academic details added yet.</p>
+            )}
+          </div>
+        )}
+      </Block>
     </div>
   );
 }
 
-// ==================== CertificateSection (Simple List + Word Export with Embedded Images) ====================
-function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedInUser }) {
+// ==================== CertificateSection (Modified for Staff) ====================
+function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedInUser, isStaffView = false }) {
   const [certificates, setCertificates] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({ title: '', description: '', issuedBy: '', tags: '', semester: '1' });
+  const [formData, setFormData] = useState({ 
+    title: '', 
+    description: '', 
+    issuedBy: '', 
+    tags: '', 
+    semester: '1',
+    category: 'academic'
+  });
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1414,8 +1299,11 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       fd.append('type', 'certificate');
       fd.append('userId', userId);
       fd.append('issuedBy', formData.issuedBy || 'Self');
-      fd.append('tags', formData.tags);
-      fd.append('semester', formData.semester);
+      if (!isStaffView) {
+        fd.append('tags', formData.tags);
+        fd.append('semester', formData.semester);
+        fd.append('category', formData.category);
+      }
       fd.append('files', selectedFile);
       fd.append('fromDate', fromDate);
       if (isDateRange && toDate) fd.append('toDate', toDate);
@@ -1425,7 +1313,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       if (response.ok && data.success) {
         setCertificates([{ ...data.post, createdAt: data.post.createdAt || new Date().toISOString() }, ...certificates]);
         setShowForm(false);
-        setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' });
+        setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1', category: 'academic' });
         clearFile();
         setFromDate('');
         setToDate('');
@@ -1493,7 +1381,6 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
     }
   };
 
-  // Helper to convert image URL to base64 (for embedding in Word)
   const imageToBase64 = async (url) => {
     try {
       const response = await fetch(url);
@@ -1508,18 +1395,16 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
     }
   };
 
-  // ===================== WORD EXPORT (fixed for Word/WPS compatibility) =====================
   const exportToWord = async () => {
   setExporting(true);
   try {
     const {
       Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
       ImageRun, AlignmentType, WidthType, BorderStyle, ShadingType,
-      VerticalAlign, HeadingLevel,
+      VerticalAlign,
     } = await import('docx');
     const { saveAs } = await import('file-saver');
 
-    // ── Helper: fetch URL → ArrayBuffer ───────────────────────────────────
     const fetchBuffer = async (url) => {
       try {
         const res = await fetch(url);
@@ -1528,10 +1413,8 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       } catch { return null; }
     };
 
-    // ── Fetch logo ────────────────────────────────────────────────────────
     const logoBuffer = await fetchBuffer('/logo.png');
 
-    // ── Fetch all certificate images ──────────────────────────────────────
     const certsWithImages = await Promise.all(
       certificates.map(async (cert) => {
         const imgUrl = cert.media?.[0]?.url;
@@ -1544,10 +1427,12 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       (a, b) => (a.semester || 1) - (b.semester || 1)
     );
 
-    const dept        = student?.department || 'Computer Science and Engineering';
-    const studentName = student?.name       || 'N/A';
-    const studentReg  = student?.registerNumber || 'N/A';
-    const studentBatch= student?.batchYear  || 'N/A';
+    const dept = student?.department || 'Computer Science and Engineering';
+    const studentName = student?.name || 'N/A';
+    const studentId = isStaffView 
+      ? (student?.staffId || 'N/A')
+      : (student?.registerNumber || 'N/A');
+    const studentBatch = !isStaffView ? (student?.batchYear || 'N/A') : null;
 
     const formatDate = (val) => {
       if (!val) return '';
@@ -1555,36 +1440,35 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
     };
 
-    // ── Shared border/style helpers ───────────────────────────────────────
     const border = { style: BorderStyle.SINGLE, size: 4, color: '999999' };
     const borders = { top: border, bottom: border, left: border, right: border };
     const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
     const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
     const cell = (children, opts = {}) =>
-  new TableCell({
-    borders: opts.noBorder ? noBorders : borders,
-    width:   { size: opts.width ?? 1500, type: WidthType.DXA },
-    shading: opts.fill
-      ? { fill: opts.fill, type: ShadingType.CLEAR }
-      : { type: ShadingType.NIL },
-    margins: { top: 60, bottom: 60, left: 100, right: 100 },
-    verticalAlign: VerticalAlign.CENTER,
-    ...(opts.colSpan ? { columnSpan: opts.colSpan } : {}),
-    children,
-  });
+      new TableCell({
+        borders: opts.noBorder ? noBorders : borders,
+        width: { size: opts.width ?? 1500, type: WidthType.DXA },
+        shading: opts.fill
+          ? { fill: opts.fill, type: ShadingType.CLEAR }
+          : { type: ShadingType.NIL },
+        margins: { top: 60, bottom: 60, left: 100, right: 100 },
+        verticalAlign: VerticalAlign.CENTER,
+        ...(opts.colSpan ? { columnSpan: opts.colSpan } : {}),
+        children,
+      });
 
     const para = (text, opts = {}) =>
       new Paragraph({
         alignment: opts.align ?? AlignmentType.LEFT,
-        spacing:   { before: opts.before ?? 0, after: opts.after ?? 0 },
+        spacing: { before: opts.before ?? 0, after: opts.after ?? 0 },
         children: [
           new TextRun({
             text: text ?? '',
-            bold:      opts.bold  ?? false,
-            size:      (opts.size ?? 11) * 2,   // half-points
-            font:      'Times New Roman',
-            color:     opts.color ?? 'auto',
+            bold: opts.bold ?? false,
+            size: (opts.size ?? 11) * 2,
+            font: 'Times New Roman',
+            color: opts.color ?? 'auto',
           }),
         ],
       });
@@ -1592,20 +1476,43 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
     const headerPara = (text, size, bold = false) =>
       para(text, { align: AlignmentType.CENTER, size, bold, before: 20, after: 20 });
 
-    // ── Page constants (A4, 1.5cm margins) ───────────────────────────────
-    // A4: 11906 × 16838 DXA  |  1.5 cm ≈ 851 DXA
-    const MARGIN   = 851;
-    const PAGE_W   = 11906;
+    const MARGIN = 851;
+    const PAGE_W = 11906;
     const CONTENT_W = PAGE_W - MARGIN * 2; // 10204 DXA
 
-    // ── Column widths (DXA) – must sum to CONTENT_W ───────────────────────
-    // S.No | Sem | Title | Issued By | Date | Preview
-    const COL_W = [700, 900, 3004, 2200, 1600, 1800]; // sum = 10204
+    // Define thCell before using it
+    const thCell = (text, w) =>
+      cell([para(text, { bold: true, size: 9, align: AlignmentType.CENTER })], { width: w });
 
-    // ── HEADER: logo + college name ───────────────────────────────────────
+    // Determine columns and header based on isStaffView
+    let COL_W, headerCells, colSpanCount;
+    if (isStaffView) {
+      COL_W = [800, 3204, 2500, 1900, 1800]; // sum = 10204
+      headerCells = [
+        thCell('S.No', COL_W[0]),
+        thCell('Certificate Title', COL_W[1]),
+        thCell('Issued By', COL_W[2]),
+        thCell('Participation Date', COL_W[3]),
+        thCell('Preview', COL_W[4]),
+      ];
+      colSpanCount = 5;
+    } else {
+      COL_W = [600, 700, 1200, 2804, 2000, 1600, 1800];
+      headerCells = [
+        thCell('S.No', COL_W[0]),
+        thCell('Semester', COL_W[1]),
+        thCell('Category', COL_W[2]),
+        thCell('Certificate Title', COL_W[3]),
+        thCell('Issued By', COL_W[4]),
+        thCell('Participation Date', COL_W[5]),
+        thCell('Preview', COL_W[6]),
+      ];
+      colSpanCount = 7;
+    }
+
+    // Header table with logo and college name
     const headerRow = new TableRow({
       children: [
-        // Logo cell
         cell(
           logoBuffer
             ? [new Paragraph({
@@ -1618,7 +1525,6 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
             : [para('')],
           { width: 1000, noBorder: true }
         ),
-        // College name cell
         cell(
           [
             headerPara('JAYARAJ ANNAPACKIAM CSI COLLEGE OF ENGINEERING', 16, true),
@@ -1633,13 +1539,10 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
     const headerTable = new Table({
       width: { size: CONTENT_W, type: WidthType.DXA },
       columnWidths: [1000, CONTENT_W - 1000],
-      borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
-                 left: noBorder, right: noBorder,
-                 insideH: noBorder, insideV: noBorder },
+      borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' }, left: noBorder, right: noBorder, insideH: noBorder, insideV: noBorder },
       rows: [headerRow],
     });
 
-    // ── Dept + report title ───────────────────────────────────────────────
     const deptTitle = para(
       `DEPARTMENT OF ${dept.toUpperCase()}`,
       { align: AlignmentType.CENTER, bold: true, size: 13, before: 120, after: 40 }
@@ -1648,13 +1551,15 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       align: AlignmentType.CENTER, bold: true, size: 13, after: 120,
     });
 
-    // ── Student info block ────────────────────────────────────────────────
+    // Student info block
     const infoLines = [
-      ['Student Name:',    studentName],
-      ['Register Number:', studentReg],
-      ['Department:',      dept],
-      ['Batch Year:',      String(studentBatch)],
+      ['Name:', studentName],
+      [isStaffView ? 'Staff ID:' : 'Register Number:', studentId],
+      ['Department:', dept],
     ];
+    if (!isStaffView && studentBatch) {
+      infoLines.push(['Batch Year:', String(studentBatch)]);
+    }
 
     const infoTable = new Table({
       width: { size: CONTENT_W, type: WidthType.DXA },
@@ -1662,30 +1567,16 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       rows: infoLines.map(([label, value]) =>
         new TableRow({
           children: [
-            cell([para(label, { bold: true, size: 10 })],
-                 { width: 2000, noBorder: true }),
-            cell([para(value, { size: 10 })],
-                 { width: CONTENT_W - 2000, noBorder: true }),
+            cell([para(label, { bold: true, size: 10 })], { width: 2000, noBorder: true }),
+            cell([para(value, { size: 10 })], { width: CONTENT_W - 2000, noBorder: true }),
           ],
         })
       ),
     });
 
-    // ── Certificate table ─────────────────────────────────────────────────
-    const thCell = (text, w) =>
-      cell([para(text, { bold: true, size: 9, align: AlignmentType.CENTER })],
-           { width: w });
-
     const headerTableRow = new TableRow({
       tableHeader: true,
-      children: [
-        thCell('S.No',             COL_W[0]),
-        thCell('Semester',         COL_W[1]),
-        thCell('Certificate Title',COL_W[2]),
-        thCell('Issued By',        COL_W[3]),
-        thCell('Participation Date',COL_W[4]),
-        thCell('Preview',          COL_W[5]),
-      ],
+      children: headerCells,
     });
 
     const dataRows = sorted.map((cert, idx) => {
@@ -1694,7 +1585,8 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
           (cert.participationDate.to ? ` – ${formatDate(cert.participationDate.to)}` : '')
         : 'Not specified';
 
-      // Preview cell: real embedded image or "No image" text
+      const categoryDisplay = cert.category === 'extra curricular' ? 'Extra Curricular' : 'Academic';
+
       const previewChildren = cert.imgBuffer
         ? [new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -1712,16 +1604,29 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
           })]
         : [para('No image', { align: AlignmentType.CENTER, size: 9 })];
 
-      return new TableRow({
-        children: [
-          cell([para(String(idx + 1), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[0] }),
-          cell([para(String(cert.semester ?? '—'), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[1] }),
-          cell([para(cert.title ?? 'Untitled', { size: 9 })], { width: COL_W[2] }),
-          cell([para(cert.issuedBy ?? '—', { size: 9 })], { width: COL_W[3] }),
-          cell([para(participation, { size: 9, align: AlignmentType.CENTER })], { width: COL_W[4] }),
-          cell(previewChildren, { width: COL_W[5] }),
-        ],
-      });
+      if (isStaffView) {
+        return new TableRow({
+          children: [
+            cell([para(String(idx + 1), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[0] }),
+            cell([para(cert.title ?? 'Untitled', { size: 9 })], { width: COL_W[1] }),
+            cell([para(cert.issuedBy ?? '—', { size: 9 })], { width: COL_W[2] }),
+            cell([para(participation, { size: 9, align: AlignmentType.CENTER })], { width: COL_W[3] }),
+            cell(previewChildren, { width: COL_W[4] }),
+          ],
+        });
+      } else {
+        return new TableRow({
+          children: [
+            cell([para(String(idx + 1), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[0] }),
+            cell([para(String(cert.semester ?? '—'), { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[1] }),
+            cell([para(categoryDisplay, { align: AlignmentType.CENTER, size: 9 })], { width: COL_W[2] }),
+            cell([para(cert.title ?? 'Untitled', { size: 9 })], { width: COL_W[3] }),
+            cell([para(cert.issuedBy ?? '—', { size: 9 })], { width: COL_W[4] }),
+            cell([para(participation, { size: 9, align: AlignmentType.CENTER })], { width: COL_W[5] }),
+            cell(previewChildren, { width: COL_W[6] }),
+          ],
+        });
+      }
     });
 
     const certTable = new Table({
@@ -1731,13 +1636,12 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
         ? [new TableRow({
             children: [cell(
               [para('No certificates uploaded.', { align: AlignmentType.CENTER })],
-              { width: CONTENT_W, colSpan: 6 }
+              { width: CONTENT_W, colSpan: colSpanCount }
             )],
           })]
         : [headerTableRow, ...dataRows],
     });
 
-    // ── Assemble document ─────────────────────────────────────────────────
     const doc = new Document({
       styles: {
         default: {
@@ -1747,7 +1651,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       sections: [{
         properties: {
           page: {
-            size:   { width: PAGE_W, height: 16838 },
+            size: { width: PAGE_W, height: 16838 },
             margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN },
           },
         },
@@ -1756,14 +1660,17 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
           deptTitle,
           reportTitle,
           infoTable,
-          para('', { after: 80 }),   // spacer
+          para('', { after: 80 }),
           certTable,
         ],
       }],
     });
 
     const buffer = await Packer.toBlob(doc);
-    saveAs(buffer, `${studentReg}_Certificates.docx`);
+    const fileName = isStaffView 
+      ? `${student?.staffId || 'staff'}_Certificates.docx`
+      : `${student?.registerNumber || 'student'}_Certificates.docx`;
+    saveAs(buffer, fileName);
     showAlert('Word document downloaded!', 'success');
 
   } catch (error) {
@@ -1802,7 +1709,6 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
 
   return (
     <>
-      {/* Action Buttons */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         {isOwnProfile && !showForm && (
           <button onClick={() => setShowForm(true)} className="action-btn-primary">
@@ -1828,33 +1734,47 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
         )}
       </div>
 
-      {/* Upload Form */}
       {showForm && (
         <div style={{ background: '#171B24', border: '1px solid #222634', borderRadius: 12, padding: '1.5rem', marginBottom: 20 }}>
           <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Upload Certificate</p>
           <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { label: 'Title *', key: 'title', placeholder: 'Web Development Certification' },
-              { label: 'Issued by', key: 'issuedBy', placeholder: 'University / Platform' },
-              { label: 'Tags', key: 'tags', placeholder: 'React, Frontend, Web Dev' },
-            ].map(({ label, key, placeholder }) => (
-              <div key={key}>
-                <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>{label}</span>
-                <input type="text" value={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.value })} placeholder={placeholder} className="profile-input" />
-              </div>
-            ))}
             <div>
-              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Description *</span>
-              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Describe the certificate…" className="profile-input" rows={3} style={{ resize: 'vertical' }} />
+              <span className="section-label">Title *</span>
+              <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="profile-input" />
             </div>
             <div>
-              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Semester *</span>
-              <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="profile-input">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (<option key={s} value={s}>Semester {s}</option>))}
-              </select>
+              <span className="section-label">Issued by</span>
+              <input type="text" value={formData.issuedBy} onChange={(e) => setFormData({ ...formData, issuedBy: e.target.value })} className="profile-input" />
             </div>
             <div>
-              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Participation Date *</span>
+              <span className="section-label">Description *</span>
+              <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="profile-input" rows={3} style={{ resize: 'vertical' }} />
+            </div>
+
+            {!isStaffView && (
+              <>
+                <div>
+                  <span className="section-label">Tags</span>
+                  <input type="text" value={formData.tags} onChange={(e) => setFormData({ ...formData, tags: e.target.value })} className="profile-input" placeholder="React, Frontend, Web Dev" />
+                </div>
+                <div>
+                  <span className="section-label">Semester *</span>
+                  <select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="profile-input">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (<option key={s} value={s}>Semester {s}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <span className="section-label">Category *</span>
+                  <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="profile-input">
+                    <option value="academic">Academic</option>
+                    <option value="extra curricular">Extra Curricular</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div>
+              <span className="section-label">Participation Date *</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
                   <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: '#7C5CFF' }} />
@@ -1867,8 +1787,9 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
               </div>
               <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
             </div>
+
             <div>
-              <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Image *</span>
+              <span className="section-label">Image *</span>
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -1881,15 +1802,15 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
               )}
               {previewUrl && <img src={previewUrl} alt="Preview" style={{ display: 'block', maxHeight: 100, marginTop: 10, borderRadius: 8, border: '1px solid #222634' }} />}
             </div>
+
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" disabled={uploading} className="action-btn-primary" style={{ opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Uploading…' : 'Upload'}</button>
-              <button type="button" onClick={() => { setShowForm(false); clearFile(); setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1' }); setFromDate(''); setToDate(''); setIsDateRange(false); }} className="action-btn-ghost">Cancel</button>
+              <button type="button" onClick={() => { setShowForm(false); clearFile(); setFormData({ title: '', description: '', issuedBy: '', tags: '', semester: '1', category: 'academic' }); setFromDate(''); setToDate(''); setIsDateRange(false); }} className="action-btn-ghost">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Simple list of certificates (no semester grouping) */}
       {certificates.length === 0 ? (
         <EmptyState
           icon={
@@ -1909,7 +1830,25 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
                   <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{cert.title || 'Untitled'}</p>
-                  {cert.semester && <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>}
+                  {!isStaffView && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {cert.semester && <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>}
+                      {cert.category && (
+                        <span style={{
+                          background: cert.category === 'extra curricular' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)',
+                          border: cert.category === 'extra curricular' ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(59,130,246,0.3)',
+                          color: cert.category === 'extra curricular' ? '#FBBF24' : '#60A5FA',
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 500,
+                          textTransform: 'capitalize',
+                        }}>
+                          {cert.category === 'extra curricular' ? 'Extra Curricular' : 'Academic'}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {isOwnProfile && (
                   <div style={{ position: 'relative' }}>
@@ -1931,7 +1870,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
                   <img src={cert.media[0].url} alt={cert.title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8, transition: 'transform 0.3s' }} onMouseOver={(e) => (e.target.style.transform = 'scale(1.02)')} onMouseOut={(e) => (e.target.style.transform = 'scale(1)')} />
                 </div>
               )}
-              {cert.tags?.length > 0 && (
+              {!isStaffView && cert.tags?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
                   {cert.tags.map((tag, i) => (<span key={i} className="tag-chip" style={{ fontSize: 10 }}>#{tag}</span>))}
                 </div>
@@ -1950,9 +1889,8 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
         </div>
       )}
 
-      {/* Modals */}
       <ImageModal isOpen={modalOpen} onClose={() => setModalOpen(false)} item={selectedCertificate} type="certificate" />
-      <EditModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} item={editItem} type="certificate" onSave={handleEditSave} showAlert={showAlert} />
+      <EditModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} item={editItem} type="certificate" onSave={handleEditSave} showAlert={showAlert} isStaffView={isStaffView} />
       <style jsx>{`
         @keyframes dropdownIn {
           from { opacity: 0; transform: scale(0.9) translateY(-5px); }
@@ -2556,8 +2494,8 @@ function EmptyState({ icon, title, desc, action, actionLabel }) {
   );
 }
 
-// ==================== EditModal (with closing animation) ====================
-function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
+// ==================== EditModal (with closing animation, Modified for Staff) ====================
+function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView = false }) {
   const [formData, setFormData] = useState({
     title: item?.title || '',
     description: item?.description || '',
@@ -2565,13 +2503,12 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
     tags: item?.tags?.join(', ') || '',
     techStack: item?.techStack?.join(', ') || '',
     semester: item?.semester?.toString() || '1',
+    category: item?.category || 'academic',
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-
-  // Participation date state
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [isDateRange, setIsDateRange] = useState(false);
@@ -2585,11 +2522,11 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
         tags: item.tags?.join(', ') || '',
         techStack: item.techStack?.join(', ') || '',
         semester: item.semester?.toString() || '1',
+        category: item.category || 'academic',
       });
       setSelectedFiles([]);
       setPreviewUrls([]);
 
-      // Initialize participation date if exists
       if (item.participationDate?.from) {
         const from = new Date(item.participationDate.from);
         setFromDate(from.toISOString().split('T')[0]);
@@ -2650,13 +2587,13 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
       fd.append('semester', formData.semester);
       if (type === 'certificate') {
         fd.append('issuedBy', formData.issuedBy);
-        fd.append('tags', formData.tags);
-        // Append participation dates
+        if (!isStaffView) {
+          fd.append('tags', formData.tags);
+          fd.append('category', formData.category);
+        }
         if (fromDate) {
           fd.append('fromDate', fromDate);
-          if (isDateRange && toDate) {
-            fd.append('toDate', toDate);
-          }
+          if (isDateRange && toDate) fd.append('toDate', toDate);
         }
       } else {
         fd.append('techStack', formData.techStack);
@@ -2717,315 +2654,69 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
           <h3 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, margin: 0 }}>
             Edit {type === 'certificate' ? 'Certificate' : 'Project'}
           </h3>
-          <button
-            onClick={handleClose}
-            style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 20 }}
-          >
-            ✕
-          </button>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Title *
-            </span>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="profile-input"
-              required
-            />
-          </div>
-          <div>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Description *
-            </span>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="profile-input"
-              rows={3}
-              required
-            />
-          </div>
+          <div><span className="section-label">Title *</span><input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="profile-input" required /></div>
+          <div><span className="section-label">Description *</span><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="profile-input" rows={3} required /></div>
+          {type === 'certificate' && <div><span className="section-label">Issued by</span><input type="text" value={formData.issuedBy} onChange={(e) => setFormData({ ...formData, issuedBy: e.target.value })} className="profile-input" /></div>}
+          {!isStaffView && (
+            <>
+              <div><span className="section-label">Tags (comma separated)</span><input type="text" value={formData.tags} onChange={(e) => setFormData({ ...formData, tags: e.target.value })} className="profile-input" placeholder="web, react, design" /></div>
+            </>
+          )}
+          {type === 'project' && <div><span className="section-label">Technologies</span><input type="text" value={formData.techStack} onChange={(e) => setFormData({ ...formData, techStack: e.target.value })} className="profile-input" placeholder="React, Node.js" /></div>}
+          {!isStaffView && (
+            <div><span className="section-label">Semester *</span><select value={formData.semester} onChange={(e) => setFormData({ ...formData, semester: e.target.value })} className="profile-input">{[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Semester {s}</option>)}</select></div>
+          )}
+          {type === 'certificate' && !isStaffView && (
+            <div><span className="section-label">Category *</span><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="profile-input"><option value="academic">Academic</option><option value="extra curricular">Extra Curricular</option></select></div>
+          )}
           {type === 'certificate' && (
             <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Issued by
-              </span>
-              <input
-                type="text"
-                value={formData.issuedBy}
-                onChange={(e) => setFormData({ ...formData, issuedBy: e.target.value })}
-                className="profile-input"
-              />
-            </div>
-          )}
-          <div>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Tags (comma separated)
-            </span>
-            <input
-              type="text"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              className="profile-input"
-              placeholder="web, react, design"
-            />
-          </div>
-          {type === 'project' && (
-            <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Technologies
-              </span>
-              <input
-                type="text"
-                value={formData.techStack}
-                onChange={(e) => setFormData({ ...formData, techStack: e.target.value })}
-                className="profile-input"
-                placeholder="React, Node.js"
-              />
-            </div>
-          )}
-          <div>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Semester *
-            </span>
-            <select
-              value={formData.semester}
-              onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-              className="profile-input"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                <option key={s} value={s}>
-                  Semester {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Participation Date Section (only for certificates) */}
-          {type === 'certificate' && (
-            <div>
-              <span
-                style={{
-                  color: '#6B7280',
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                Participation Date *
-              </span>
+              <span className="section-label">Participation Date *</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={isDateRange}
-                    onChange={(e) => setIsDateRange(e.target.checked)}
-                    style={{ accentColor: '#7C5CFF' }}
-                  />
-                  Date range (from – to)
+                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: '#7C5CFF' }} /> Date range (from – to)
                 </label>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="profile-input"
-                  required
-                  style={{ flex: 1 }}
-                />
-                {isDateRange && (
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="profile-input"
-                    style={{ flex: 1 }}
-                  />
-                )}
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="profile-input" required style={{ flex: 1 }} />
+                {isDateRange && <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="profile-input" style={{ flex: 1 }} />}
               </div>
-              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>
-                Format: DD/MM/YYYY
-              </p>
+              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
             </div>
           )}
-
           <div>
-            <span
-              style={{
-                color: '#6B7280',
-                fontSize: 11,
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Images (optional – replace all)
-            </span>
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                background: '#0B0D12',
-                border: '1px solid #222634',
-                borderRadius: 8,
-                padding: '8px 14px',
-                cursor: 'pointer',
-                color: '#9CA3AF',
-                fontSize: 13,
-              }}
-            >
-              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.5"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                />
-              </svg>
+            <span className="section-label">Images (optional – replace all)</span>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               {selectedFiles.length ? `${selectedFiles.length} selected` : 'Select Images'}
-              <input
-                type="file"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-                accept=".jpg,.jpeg,.png,.gif,.webp"
-                multiple
-              />
+              <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".jpg,.jpeg,.png,.gif,.webp" multiple />
             </label>
             {previewUrls.length > 0 && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                  gap: 8,
-                  marginTop: 10,
-                }}
-              >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginTop: 10 }}>
                 {previewUrls.map((url, i) => (
                   <div key={i} style={{ position: 'relative' }}>
-                    <img
-                      src={url}
-                      alt={`preview ${i + 1}`}
-                      style={{
-                        width: '100%',
-                        height: 70,
-                        objectFit: 'cover',
-                        borderRadius: 6,
-                        border: '1px solid #222634',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile(i)}
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        width: 20,
-                        height: 20,
-                        background: '#EF4444',
-                        border: 'none',
-                        borderRadius: '50%',
-                        color: '#fff',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ✕
-                    </button>
+                    <img src={url} alt={`preview ${i+1}`} style={{ width: '100%', height: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid #222634' }} />
+                    <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, background: '#EF4444', border: 'none', borderRadius: '50%', color: '#fff', fontSize: 12, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              type="submit"
-              disabled={uploading}
-              className="action-btn-primary"
-              style={{ opacity: uploading ? 0.6 : 1 }}
-            >
-              {uploading ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button type="button" onClick={handleClose} className="action-btn-ghost">
-              Cancel
-            </button>
+            <button type="submit" disabled={uploading} className="action-btn-primary" style={{ opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Saving...' : 'Save Changes'}</button>
+            <button type="button" onClick={handleClose} className="action-btn-ghost">Cancel</button>
           </div>
         </form>
       </div>
       <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes slideOut {
-          from { opacity: 1; transform: translateY(0) scale(1); }
-          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes slideOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-20px) scale(0.95); } }
       `}</style>
     </div>
   );
@@ -3035,7 +2726,7 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert }) {
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const regNo = params?.regNo || '';
+  const identifier = params?.regNo || '';
 
   const [user, setUser] = useState(null);
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -3044,6 +2735,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ bio: '', interests: '' });
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  const isStaffView = user?.role === 'staff';
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -3055,17 +2748,17 @@ export default function ProfilePage() {
         console.error('Error parsing user data:', err);
       }
     }
-    if (regNo && regNo !== 'undefined') {
+    if (identifier && identifier !== 'undefined') {
       fetchUserProfile();
     } else {
       setLoading(false);
     }
-  }, [regNo]);
+  }, [identifier]);
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/users/${regNo}`);
+      const response = await fetch(`/api/users/${identifier}`);
       const data = await response.json();
       if (response.ok && data.success) {
         setUser(data.user);
@@ -3092,7 +2785,7 @@ export default function ProfilePage() {
         return;
       }
       const loggedInUserData = JSON.parse(userData);
-      const response = await fetch(`/api/users/${regNo}`, {
+      const response = await fetch(`/api/users/${identifier}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3133,11 +2826,11 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  const isOwnProfile =
-    loggedInUser &&
-    user &&
-    (loggedInUser._id === user._id ||
-      loggedInUser.registerNumber === user.registerNumber);
+  const isOwnProfile = loggedInUser && user && (
+  loggedInUser._id === user._id ||
+  (user.role === 'student' && loggedInUser.registerNumber === user.registerNumber) ||
+  (user.role === 'staff' && loggedInUser.staffId === user.staffId)
+);
 
   if (loading) {
     return (
@@ -3213,77 +2906,17 @@ export default function ProfilePage() {
               margin: '0 auto 1.5rem',
             }}
           >
-            <svg
-              width="28"
-              height="28"
-              fill="none"
-              stroke="#EF4444"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg width="28" height="28" fill="none" stroke="#EF4444" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h3
-            style={{
-              color: '#E5E7EB',
-              fontSize: 18,
-              fontWeight: 600,
-              marginBottom: 8,
-            }}
-          >
-            User Not Found
-          </h3>
+          <h3 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 600, marginBottom: 8 }}>User Not Found</h3>
           <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 24 }}>
-            No user found with register number{' '}
-            <code
-              style={{
-                background: '#171B24',
-                padding: '2px 8px',
-                borderRadius: 4,
-                color: '#9CA3AF',
-              }}
-            >
-              {regNo}
-            </code>
+            No user found with ID{' '}
+            <code style={{ background: '#171B24', padding: '2px 8px', borderRadius: 4, color: '#9CA3AF' }}>{identifier}</code>
           </p>
-          <button
-            onClick={() => router.push('/feed')}
-            style={{
-              width: '100%',
-              background: '#7C5CFF',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 0',
-              fontWeight: 500,
-              cursor: 'pointer',
-              marginBottom: 8,
-              fontSize: 14,
-            }}
-          >
-            Back to Feed
-          </button>
-          <button
-            onClick={fetchUserProfile}
-            style={{
-              width: '100%',
-              background: 'transparent',
-              color: '#9CA3AF',
-              border: '1px solid #222634',
-              borderRadius: 8,
-              padding: '10px 0',
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontSize: 14,
-            }}
-          >
-            Try Again
-          </button>
+          <button onClick={() => router.push('/feed')} style={{ width: '100%', background: '#7C5CFF', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', marginBottom: 8, fontSize: 14 }}>Back to Feed</button>
+          <button onClick={fetchUserProfile} style={{ width: '100%', background: 'transparent', color: '#9CA3AF', border: '1px solid #222634', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>Try Again</button>
         </div>
       </div>
     );
@@ -3294,22 +2927,10 @@ export default function ProfilePage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes slideOut {
-          from { opacity: 1; transform: translateY(0) scale(1); }
-          to { opacity: 0; transform: translateY(-20px) scale(0.95); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes slideOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-20px) scale(0.95); } }
         .profile-input {
           width: 100%; background: #0B0D12; border: 1px solid #222634;
           border-radius: 8px; padding: 10px 14px; color: #E5E7EB;
@@ -3377,186 +2998,62 @@ export default function ProfilePage() {
       `}</style>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
-        <div
-          className="profile-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '290px 1fr',
-            gap: '1.5rem',
-            alignItems: 'start',
-          }}
-        >
+        <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: '1.5rem', alignItems: 'start' }}>
           {/* LEFT COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="profile-card" style={{ padding: '1.75rem 1.5rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: '50%',
-                    margin: '0 auto 14px',
-                    background:
-                      'linear-gradient(135deg, rgba(124,92,255,0.25), rgba(124,92,255,0.05))',
-                    border: '1px solid rgba(124,92,255,0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 28,
-                      fontWeight: 700,
-                      color: '#7C5CFF',
-                    }}
-                  >
-                    {user.name?.charAt(0).toUpperCase() || 'U'}
-                  </span>
+                <div style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px', background: 'linear-gradient(135deg, rgba(124,92,255,0.25), rgba(124,92,255,0.05))', border: '1px solid rgba(124,92,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: '#7C5CFF' }}>{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                 </div>
-                <h1
-                  style={{
-                    color: '#E5E7EB',
-                    fontSize: 18,
-                    fontWeight: 700,
-                    margin: '0 0 4px',
-                  }}
-                >
-                  {user.name || 'Unknown'}
-                </h1>
-                <p
-                  style={{
-                    color: '#6B7280',
-                    fontSize: 12,
-                    margin: '0 0 10px',
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  {user.registerNumber || user.staffId}
+                <h1 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>{user.name || 'Unknown'}</h1>
+                <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 10px', letterSpacing: '0.06em' }}>
+                  {user.role === 'staff' ? user.staffId : user.registerNumber}
                 </p>
                 {user.department && (
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      background: 'rgba(124,92,255,0.1)',
-                      border: '1px solid rgba(124,92,255,0.2)',
-                      color: '#a78bfa',
-                      padding: '3px 12px',
-                      borderRadius: 999,
-                      fontSize: 11,
-                      fontWeight: 500,
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    {user.department}
-                  </span>
+                  <span style={{ display: 'inline-block', background: 'rgba(124,92,255,0.1)', border: '1px solid rgba(124,92,255,0.2)', color: '#a78bfa', padding: '3px 12px', borderRadius: 999, fontSize: 11, fontWeight: 500 }}>{user.department}</span>
                 )}
-                {user.batchYear && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      background: '#171B24',
-                      border: '1px solid #222634',
-                      borderRadius: 8,
-                      padding: '5px 14px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: '#6B7280',
-                        fontSize: 11,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Batch
-                    </span>
-                    <span style={{ color: '#E5E7EB', fontSize: 12, fontWeight: 600 }}>
-                      {user.batchYear}
-                    </span>
+                {user.batchYear && user.role === 'student' && (
+                  <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#171B24', border: '1px solid #222634', borderRadius: 8, padding: '5px 14px' }}>
+                    <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Batch</span>
+                    <span style={{ color: '#E5E7EB', fontSize: 12, fontWeight: 600 }}>{user.batchYear}</span>
                   </div>
                 )}
               </div>
 
-              <div style={{ height: 1, background: '#222634', marginBottom: '1.25rem' }} />
-
-              <div style={{ marginBottom: 16 }}>
-                <span className="section-label">About</span>
-                {isEditing ? (
-                  <textarea
-                    value={editData.bio}
-                    onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
-                    className="profile-input"
-                    rows={3}
-                    placeholder="Write about yourself..."
-                    style={{ resize: 'vertical' }}
-                  />
-                ) : (
-                  <p
-                    style={{
-                      color: user.profile?.bio ? '#9CA3AF' : '#6B7280',
-                      fontSize: 13,
-                      lineHeight: 1.7,
-                      margin: 0,
-                    }}
-                  >
-                    {user.profile?.bio || 'No bio yet.'}
-                  </p>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <span className="section-label">Interests</span>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.interests}
-                    onChange={(e) =>
-                      setEditData({ ...editData, interests: e.target.value })
-                    }
-                    className="profile-input"
-                    placeholder="Design, AI, Web Dev..."
-                  />
-                ) : user.profile?.interests?.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {user.profile.interests.map((interest, index) => (
-                      <span key={index} className="tag-chip">
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>
-                    No interests yet.
-                  </p>
-                )}
-              </div>
-
-              {isOwnProfile && (
+              {!isStaffView && (
                 <>
-                  <div
-                    style={{ height: 1, background: '#222634', marginBottom: '1rem' }}
-                  />
-                  {isEditing ? (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={handleSave} className="action-btn-primary" style={{ flex: 1 }}>
-                        Save
-                      </button>
-                      <button onClick={handleCancel} className="action-btn-ghost" style={{ flex: 1 }}>
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="action-btn-ghost"
-                      style={{ width: '100%' }}
-                    >
-                      Edit Profile
-                    </button>
+                  <div style={{ height: 1, background: '#222634', marginBottom: '1.25rem' }} />
+                  <div style={{ marginBottom: 16 }}>
+                    <span className="section-label">About</span>
+                    {isEditing ? (
+                      <textarea value={editData.bio} onChange={(e) => setEditData({ ...editData, bio: e.target.value })} className="profile-input" rows={3} placeholder="Write about yourself..." style={{ resize: 'vertical' }} />
+                    ) : (
+                      <p style={{ color: user.profile?.bio ? '#9CA3AF' : '#6B7280', fontSize: 13, lineHeight: 1.7, margin: 0 }}>{user.profile?.bio || 'No bio yet.'}</p>
+                    )}
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <span className="section-label">Interests</span>
+                    {isEditing ? (
+                      <input type="text" value={editData.interests} onChange={(e) => setEditData({ ...editData, interests: e.target.value })} className="profile-input" placeholder="Design, AI, Web Dev..." />
+                    ) : user.profile?.interests?.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{user.profile.interests.map((interest, index) => <span key={index} className="tag-chip">{interest}</span>)}</div>
+                    ) : (
+                      <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No interests yet.</p>
+                    )}
+                  </div>
+                  {isOwnProfile && (
+                    <>
+                      <div style={{ height: 1, background: '#222634', marginBottom: '1rem' }} />
+                      {isEditing ? (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={handleSave} className="action-btn-primary" style={{ flex: 1 }}>Save</button>
+                          <button onClick={handleCancel} className="action-btn-ghost" style={{ flex: 1 }}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setIsEditing(true)} className="action-btn-ghost" style={{ width: '100%' }}>Edit Profile</button>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -3566,19 +3063,15 @@ export default function ProfilePage() {
           {/* RIGHT COLUMN */}
           <div className="profile-card" style={{ overflow: 'hidden' }}>
             <div style={{ borderBottom: '1px solid #222634', display: 'flex' }}>
-              {[
-                { id: 'certificates', label: 'Certificates' },
-                { id: 'projects', label: 'Projects' },
-                { id: 'resume', label: 'Resume' },
-              ].map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`tab-btn ${activeTab === id ? 'active' : 'inactive'}`}
-                >
-                  {label}
-                </button>
-              ))}
+              {!isStaffView ? (
+                <>
+                  <button onClick={() => setActiveTab('certificates')} className={`tab-btn ${activeTab === 'certificates' ? 'active' : 'inactive'}`}>Certificates</button>
+                  <button onClick={() => setActiveTab('projects')} className={`tab-btn ${activeTab === 'projects' ? 'active' : 'inactive'}`}>Projects</button>
+                  <button onClick={() => setActiveTab('resume')} className={`tab-btn ${activeTab === 'resume' ? 'active' : 'inactive'}`}>Resume</button>
+                </>
+              ) : (
+                <button className="tab-btn active">Certificates</button>
+              )}
             </div>
             <div style={{ padding: '1.75rem' }}>
               {activeTab === 'certificates' && (
@@ -3588,16 +3081,17 @@ export default function ProfilePage() {
                   showAlert={showAlert}
                   student={user}
                   loggedInUser={loggedInUser}
+                  isStaffView={isStaffView}
                 />
               )}
-              {activeTab === 'projects' && (
+              {!isStaffView && activeTab === 'projects' && (
                 <ProjectSection userId={user._id} isOwnProfile={isOwnProfile} showAlert={showAlert} />
               )}
-              {activeTab === 'resume' && (
+              {!isStaffView && activeTab === 'resume' && (
                 <ResumeSection
                   user={user}
                   isOwnProfile={isOwnProfile}
-                  regNo={regNo}
+                  regNo={identifier}
                   onUpdate={setUser}
                   showAlert={showAlert}
                   loggedInUser={loggedInUser}

@@ -1,4 +1,3 @@
-// app/api/posts/[id]/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Post from '@/lib/models/Post';
@@ -27,7 +26,6 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Delete the post
     const deletedPost = await Post.findByIdAndDelete(id);
 
     if (!deletedPost) {
@@ -37,7 +35,6 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Optional: Delete images from Cloudinary
     if (deletedPost.media && deletedPost.media.length) {
       for (const mediaItem of deletedPost.media) {
         if (mediaItem.cloudinaryId) {
@@ -113,9 +110,10 @@ export async function PUT(request, { params }) {
     const techStack = formData.get('techStack') || '';
     const issuedBy = formData.get('issuedBy') || '';
     const semester = formData.get('semester');
-    const fromDate = formData.get('fromDate');     // 👈 ADD
-    const toDate = formData.get('toDate');         // 👈 ADD
-    const files = formData.getAll('files'); // new images (optional)
+    const fromDate = formData.get('fromDate');
+    const toDate = formData.get('toDate');
+    const category = formData.get('category'); // ← mirroring fromDate
+    const files = formData.getAll('files');
 
     if (!title || !description) {
       return NextResponse.json(
@@ -132,7 +130,6 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Update text fields
     post.title = title;
     post.description = description;
     if (semester && !isNaN(parseInt(semester))) {
@@ -144,21 +141,23 @@ export async function PUT(request, { params }) {
       post.issuedBy = issuedBy || 'Self';
       post.tags = tags.split(',').map(t => t.trim()).filter(Boolean);
 
-      // 👇 NEW: Update participation date
+      // Update participation date (existing pattern)
       if (fromDate) {
         post.participationDate = post.participationDate || {};
         post.participationDate.from = new Date(fromDate);
         post.participationDate.to = toDate ? new Date(toDate) : undefined;
       }
-      // (If no fromDate is sent, keep existing date; do not clear)
+
+      // Update category exactly like participationDate
+      if (category) {
+        post.category = category;
+      }
     } else if (post.type === 'project') {
       post.techStack = techStack.split(',').map(t => t.trim()).filter(Boolean);
       post.tags = tags.split(',').map(t => t.trim()).filter(Boolean);
     }
 
-    // Handle media update: if new files are provided, replace all existing media
     if (files && files.length > 0) {
-      // Delete old images from Cloudinary
       if (post.media && post.media.length) {
         for (const mediaItem of post.media) {
           if (mediaItem.cloudinaryId) {
@@ -171,7 +170,6 @@ export async function PUT(request, { params }) {
         }
       }
 
-      // Upload new files
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       const maxSize = 5 * 1024 * 1024;
       const newMedia = [];
@@ -218,7 +216,6 @@ export async function PUT(request, { params }) {
     post.updatedAt = new Date();
     await post.save();
 
-    // Populate owner for response
     const updatedPost = await Post.findById(post._id).populate(
       'owner',
       'name registerNumber profile.profilePic'

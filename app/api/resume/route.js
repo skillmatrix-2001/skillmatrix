@@ -1,5 +1,3 @@
-// /app/api/resume/route.js
-
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import UserProfile from "@/models/UserProfile";
@@ -19,30 +17,19 @@ export async function POST(request) {
     const { regNo, format } = await request.json();
 
     if (!regNo) {
-      return NextResponse.json(
-        { message: "regNo is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "regNo is required" }, { status: 400 });
     }
 
     if (!["pdf", "docx"].includes(format)) {
-      return NextResponse.json(
-        { message: 'format must be "pdf" or "docx"' },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: 'format must be "pdf" or "docx"' }, { status: 400 });
     }
 
     await connectDB();
 
-    const user = await UserProfile.findOne({
-      registerNumber: regNo,
-    }).lean();
+    const user = await UserProfile.findOne({ registerNumber: regNo }).lean();
 
     if (!user) {
-      return NextResponse.json(
-        { message: "Profile not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Profile not found" }, { status: 404 });
     }
 
     const p = user.profile || {};
@@ -87,6 +74,12 @@ export async function POST(request) {
       })),
 
       languages: ensureArray(p.languages),
+
+      // ─── NEW ACADEMIC FIELDS ─────────────────────────────────
+      tenthPercentage: p.tenthPercentage,
+      twelfthPercentage: p.twelfthPercentage,
+      cgpa: p.cgpa,
+      cgpaSemester: p.cgpaSemester,
     };
 
     let buffer, contentType, fileName;
@@ -98,16 +91,12 @@ export async function POST(request) {
         fileName = `resume_${regNo}.pdf`;
       } else {
         buffer = await generateDOCX(resumeData);
-        contentType =
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         fileName = `resume_${regNo}.docx`;
       }
     } catch (genErr) {
       console.error("[Generator Error]", genErr);
-      return NextResponse.json(
-        { message: `Generator failed: ${genErr.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ message: `Generator failed: ${genErr.message}` }, { status: 500 });
     }
 
     return new Response(buffer, {
@@ -119,10 +108,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error("[Resume API Error]", err);
-
-    return NextResponse.json(
-      { message: `Failed to generate resume: ${err.message}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: `Failed to generate resume: ${err.message}` }, { status: 500 });
   }
 }

@@ -93,7 +93,6 @@ export default function Navbar() {
 
   const isActive = (href) => pathname === href;
 
-  // Removed the duplicate "Profile" link from navLinks (only Feed, Jobs, Dashboard remain)
   const navLinks = user ? [
     { href: '/feed', label: 'Feed', show: true },
     { href: null, label: 'Jobs', show: user.role === 'student', onClick: handleJobsClick },
@@ -236,7 +235,7 @@ export default function Navbar() {
             <span className="nav-logo-text">SkillMatrix</span>
           </Link>
 
-          {/* Nav links — desktop (no duplicate profile) */}
+          {/* Nav links — desktop */}
           {user && (
             <div className="nav-links">
               {navLinks.map((link) =>
@@ -286,9 +285,17 @@ export default function Navbar() {
                       <div className="dropdown-divider" />
                     </div>
 
-                    {/* Profile - only appears here in dropdown, not in main nav */}
+                    {/* Profile - Student */}
                     {user.role === 'student' && (
                       <Link href={`/profile/${user.registerNumber}`} className="dropdown-item" onClick={() => setShowUserMenu(false)}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        My Profile
+                      </Link>
+                    )}
+
+                    {/* Profile - Staff (NEW) */}
+                    {user.role === 'staff' && (
+                      <Link href={`/profile/${user.staffId}`} className="dropdown-item" onClick={() => setShowUserMenu(false)}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         My Profile
                       </Link>

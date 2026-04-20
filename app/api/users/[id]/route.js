@@ -21,28 +21,32 @@ export async function GET(request, { params }) {
     const cleanId = id.toString().trim();
     console.log('Cleaned ID:', cleanId);
     
-    const user = await User.findOne({ registerNumber: cleanId }).select('-password');
+    // Try registerNumber first
+    let user = await User.findOne({ registerNumber: cleanId }).select('-password');
+    
+    // If not found, try staffId (for staff profiles)
+    if (!user) {
+      user = await User.findOne({ staffId: cleanId }).select('-password');
+    }
+    
+    // If still not found, try _id
+    if (!user) {
+      try {
+        const userById = await User.findById(cleanId).select('-password');
+        if (userById) {
+          user = userById;
+        }
+      } catch (err) {
+        console.log('Not a valid MongoDB ID format');
+      }
+    }
     
     if (user) {
-      console.log('✅ Found user by registerNumber:', user.name);
+      console.log('✅ Found user:', user.name);
       return NextResponse.json({ 
         success: true, 
         user: user.toObject()
       });
-    }
-    
-    console.log('Not found by registerNumber, trying by _id...');
-    try {
-      const userById = await User.findById(cleanId).select('-password');
-      if (userById) {
-        console.log('✅ Found user by _id:', userById.name);
-        return NextResponse.json({ 
-          success: true, 
-          user: userById.toObject()
-        });
-      }
-    } catch (err) {
-      console.log('Not a valid MongoDB ID format');
     }
     
     console.log('❌ User not found with any ID type');
@@ -115,6 +119,10 @@ export async function PUT(request, { params }) {
         education: Array.isArray(updates.profile.education)
           ? updates.profile.education
           : existingProfile.education || [],
+        tenthPercentage: updates.profile.tenthPercentage ?? existingProfile.tenthPercentage,
+        twelfthPercentage: updates.profile.twelfthPercentage ?? existingProfile.twelfthPercentage,
+        cgpa: updates.profile.cgpa ?? existingProfile.cgpa,
+        cgpaSemester: updates.profile.cgpaSemester ?? existingProfile.cgpaSemester,
       };
     }
 

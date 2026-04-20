@@ -1,4 +1,3 @@
-// app/api/posts/upload/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Post from '@/lib/models/Post';
@@ -29,14 +28,14 @@ export async function POST(request) {
     const tags = formData.get('tags') || '';
     const techStack = formData.get('techStack') || '';
     const issuedBy = formData.get('issuedBy') || '';
-    const semester = formData.get('semester');
+    let semester = formData.get('semester');
     const fromDate = formData.get('fromDate');
     const toDate = formData.get('toDate');
-    // Get all files (multiple)
+    const category = formData.get('category') || 'academic';
     const files = formData.getAll('files');
 
     console.log('📝 Upload data received:', {
-      title, type, userId, semester,
+      title, type, userId, semester, category,
       descriptionLength: description?.length,
       fileCount: files.length,
       fileNames: files.map(f => f?.name),
@@ -76,7 +75,6 @@ export async function POST(request) {
         );
       }
 
-      // Upload to Cloudinary
       console.log(`☁️ Uploading ${file.name} to Cloudinary...`);
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -103,23 +101,24 @@ export async function POST(request) {
 
     console.log('✅ Cloudinary uploads successful');
 
+    // Ensure semester has a valid value (required by schema)
+    if (!semester || isNaN(parseInt(semester))) {
+      semester = '1'; // default for staff or missing
+    }
+    const semesterNum = parseInt(semester);
+    const validSemester = (semesterNum >= 1 && semesterNum <= 8) ? semesterNum : 1;
+
     const postData = {
       owner: userId,
       type,
       title,
       description,
       media,
+      semester: validSemester, // always set a valid semester
       date: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-
-    if (semester && !isNaN(parseInt(semester))) {
-      const sem = parseInt(semester);
-      if (sem >= 1 && sem <= 8) {
-        postData.semester = sem;
-      }
-    }
 
     // Add participation date for certificates
     if (type === 'certificate' && fromDate) {
@@ -130,6 +129,9 @@ export async function POST(request) {
     }
 
     if (type === 'certificate') {
+      if (category) {
+        postData.category = category;
+      }
       postData.issuedBy = issuedBy || 'Self';
       if (tags) {
         postData.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
@@ -160,6 +162,7 @@ export async function POST(request) {
           type: post.type,
           semester: post.semester,
           participationDate: post.participationDate,
+          category: post.category,
           media: post.media,
           issuedBy: post.issuedBy,
           tags: post.tags || [],
