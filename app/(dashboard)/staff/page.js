@@ -1,13 +1,12 @@
-// app/(dashboard)/staff/page.js
 "use client";
 
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 
-const PDFGenerator = dynamic(() => import('@/components/PDFGenerator'), { ssr: false });
+const PDFGenerator = nextDynamic(() => import('@/components/PDFGenerator'), { ssr: false });
 
 const FILTER_STORAGE_KEY = 'staffDashboardFilters';
 
@@ -49,39 +48,54 @@ export default function StaffDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Initialize state from URL first, then localStorage fallback
-  const getInitialFilters = () => {
-    const urlFilters = parseQueryParams(searchParams);
-    const storageFilters = typeof window !== 'undefined'
-      ? JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || '{}')
-      : {};
-    return { ...storageFilters, ...urlFilters }; // URL overrides storage
-  };
-
-  const initialFilters = getInitialFilters();
-
+  // State for filters – initialized with empty/defaults, then populated in useEffect
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [staffAccounts, setStaffAccounts] = useState([]);
   const [filteredStaff, setFilteredStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showStaffAccounts, setShowStaffAccounts] = useState(initialFilters.showStaffAccounts || false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(initialFilters.showAdvancedFilters || false);
-
-  const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery || '');
-  const [selectedBatch, setSelectedBatch] = useState(initialFilters.selectedBatch || 'all');
-  const [selectedSemester, setSelectedSemester] = useState(initialFilters.selectedSemester || 'all');
-  const [selectedCategory, setSelectedCategory] = useState(initialFilters.selectedCategory || 'all');
+  const [showStaffAccounts, setShowStaffAccounts] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('all');
+  const [selectedSemester, setSelectedSemester] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [allBatchYears, setAllBatchYears] = useState([]);
   const [staffUser, setStaffUser] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [reportType, setReportType] = useState('certificates');
+  
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [regFrom, setRegFrom] = useState('');
+  const [regTo, setRegTo] = useState('');
+  const [showProjectsColumn, setShowProjectsColumn] = useState(false);
 
-  const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom || '');
-  const [dateTo, setDateTo] = useState(initialFilters.dateTo || '');
-  const [regFrom, setRegFrom] = useState(initialFilters.regFrom || '');
-  const [regTo, setRegTo] = useState(initialFilters.regTo || '');
-  const [showProjectsColumn, setShowProjectsColumn] = useState(initialFilters.showProjectsColumn || false);
+  // Load initial filters from URL and localStorage once on mount (client-side only)
+  useEffect(() => {
+    const getInitialFilters = () => {
+      const urlFilters = parseQueryParams(searchParams);
+      const storageFilters = typeof window !== 'undefined'
+        ? JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || '{}')
+        : {};
+      return { ...storageFilters, ...urlFilters };
+    };
+
+    const filters = getInitialFilters();
+    
+    setSearchQuery(filters.searchQuery || '');
+    setSelectedBatch(filters.selectedBatch || 'all');
+    setSelectedSemester(filters.selectedSemester || 'all');
+    setSelectedCategory(filters.selectedCategory || 'all');
+    setDateFrom(filters.dateFrom || '');
+    setDateTo(filters.dateTo || '');
+    setRegFrom(filters.regFrom || '');
+    setRegTo(filters.regTo || '');
+    setShowProjectsColumn(filters.showProjectsColumn || false);
+    setShowAdvancedFilters(filters.showAdvancedFilters || false);
+    setShowStaffAccounts(filters.showStaffAccounts || false);
+  }, [searchParams]);
 
   // Sync state to URL and localStorage whenever filters change
   useEffect(() => {
@@ -664,7 +678,7 @@ export default function StaffDashboard() {
   );
 }
 
-// Helper Components (unchanged)
+// Helper Components
 const FilterTag = ({ label, onClear }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#171B24', border: '1px solid #222634', borderRadius: 999, padding: '4px 10px', fontSize: 12, color: '#9CA3AF' }}>
     {label}
