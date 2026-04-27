@@ -19,9 +19,9 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
   };
 
   const isConfirm = type === 'confirm';
-  const borderColor = isConfirm ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.3)';
-  const textColor = isConfirm ? '#FCA5A5' : '#10B981';
-  const buttonBg = isConfirm ? '#DC2626' : '#7C5CFF';
+  const borderColor = isConfirm ? 'var(--danger)' : 'var(--success)';
+  const textColor = isConfirm ? 'var(--danger)' : 'var(--primary)';
+  const buttonBg = isConfirm ? 'var(--danger)' : 'var(--primary)';
 
   return (
     <div
@@ -31,7 +31,7 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--modal-backdrop)',
         backdropFilter: 'blur(8px)',
         zIndex: 1000,
         display: 'flex',
@@ -43,7 +43,7 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
     >
       <div
         style={{
-          background: '#12151C',
+          background: 'var(--modal-bg)',
           border: `1px solid ${borderColor}`,
           borderRadius: 12,
           padding: '1.5rem',
@@ -80,7 +80,7 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
                   fontWeight: 500,
                   transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => (e.target.style.background = '#B91C1C')}
+                onMouseOver={(e) => (e.target.style.background = 'var(--danger-hover)')}
                 onMouseOut={(e) => (e.target.style.background = buttonBg)}
               >
                 Yes, Delete
@@ -89,8 +89,8 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
                 onClick={() => handleClose(false)}
                 style={{
                   background: 'transparent',
-                  border: '1px solid #222634',
-                  color: '#9CA3AF',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
                   borderRadius: 8,
                   padding: '8px 20px',
                   cursor: 'pointer',
@@ -98,7 +98,7 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
                   fontWeight: 500,
                   transition: 'all 0.2s',
                 }}
-                onMouseOver={(e) => (e.target.style.background = '#171B24')}
+                onMouseOver={(e) => (e.target.style.background = 'var(--surface-2)')}
                 onMouseOut={(e) => (e.target.style.background = 'transparent')}
               >
                 Cancel
@@ -118,7 +118,7 @@ function CustomAlert({ message, type, onConfirm, onCancel }) {
                 fontWeight: 500,
                 transition: 'background 0.2s',
               }}
-              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOver={(e) => (e.target.style.background = 'var(--primary-hover)')}
               onMouseOut={(e) => (e.target.style.background = buttonBg)}
             >
               OK
@@ -321,7 +321,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
         width: '100%',
         borderRadius: 8,
         overflow: 'hidden',
-        background: '#0B0D12',
+        background: 'var(--background)',
         touchAction: 'pan-y pinch-zoom',
       }}
       onTouchStart={handleTouchStart}
@@ -443,7 +443,7 @@ function ImageCarousel({ images, onImageClick, currentIndex: externalIndex, onIn
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  background: idx === index ? '#7C5CFF' : 'rgba(255,255,255,0.5)',
+                  background: idx === index ? 'var(--primary)' : 'rgba(255,255,255,0.5)',
                 }}
               />
             ))}
@@ -584,8 +584,8 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
     >
       <div
         style={{
-          background: '#12151C',
-          border: '1px solid #222634',
+          background: 'var(--modal-bg)',
+          border: '1px solid var(--modal-border)',
           borderRadius: 16,
           overflow: 'hidden',
           maxWidth: 860,
@@ -603,20 +603,20 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '14px 18px',
-            borderBottom: '1px solid #222634',
+            borderBottom: '1px solid var(--border)',
             flexShrink: 0,
           }}
         >
-          <h3 style={{ color: '#E5E7EB', fontSize: 15, fontWeight: 600, margin: 0 }}>{item?.title}</h3>
+          <h3 style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, margin: 0 }}>{item?.title}</h3>
           <button
             onClick={handleClose}
             style={{
-              background: '#171B24',
-              border: '1px solid #222634',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
               borderRadius: 8,
               padding: '6px 8px',
               cursor: 'pointer',
-              color: '#9CA3AF',
+              color: 'var(--text-secondary)',
               display: 'flex',
               lineHeight: 0,
             }}
@@ -631,7 +631,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
           <div
             ref={modalImageRef}
             style={{
-              background: '#0B0D12',
+              background: 'var(--background)',
               position: 'relative',
               overflow: 'hidden',
               touchAction: 'pan-y pinch-zoom',
@@ -688,7 +688,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid #222634',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                     padding: '8px',
                     cursor: 'pointer',
@@ -709,7 +709,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid #222634',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                     padding: '8px',
                     cursor: 'pointer',
@@ -744,7 +744,7 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
                         border: 'none',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        background: idx === currentIndex ? '#7C5CFF' : 'rgba(255,255,255,0.2)',
+                        background: idx === currentIndex ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
                       }}
                     />
                   ))}
@@ -753,24 +753,24 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
             )}
           </div>
 
-          <div style={{ padding: '16px 18px', borderTop: '1px solid #222634' }}>
+          <div style={{ padding: '16px 18px', borderTop: '1px solid var(--border)' }}>
             {type === 'certificate' && item?.issuedBy && (
-              <p style={{ color: '#7C5CFF', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
+              <p style={{ color: 'var(--primary)', fontSize: 13, marginBottom: 6, marginTop: 0 }}>
                 Issued by {item.issuedBy}
               </p>
             )}
             {item?.semester && (
-              <p style={{ color: '#6B7280', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
                 Semester {item.semester}
               </p>
             )}
             {type === 'certificate' && item?.participationDate?.from && (
-              <p style={{ color: '#10B981', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
+              <p style={{ color: 'var(--success)', fontSize: 12, marginBottom: 6, marginTop: 0 }}>
                 {new Date(item.participationDate.from).toLocaleDateString('en-GB')}
                 {item.participationDate.to && ` – ${new Date(item.participationDate.to).toLocaleDateString('en-GB')}`}
               </p>
             )}
-            <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, marginBottom: 10, marginTop: 0 }}>
               {item?.description}
             </p>
             {type === 'project' && item?.techStack?.length > 0 && (
@@ -816,8 +816,8 @@ function ImageModal({ isOpen, onClose, item, type, initialImageIndex = 0 }) {
 const Block = ({ title, children }) => (
   <div
     style={{
-      background: '#171B24',
-      border: '1px solid #222634',
+      background: 'var(--surface-2)',
+      border: '1px solid var(--border)',
       borderRadius: 12,
       padding: '1.25rem',
       marginBottom: 12,
@@ -825,7 +825,7 @@ const Block = ({ title, children }) => (
   >
     <span
       style={{
-        color: '#6B7280',
+        color: 'var(--text-dim)',
         fontSize: 11,
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
@@ -1021,7 +1021,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <input type="text" value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} placeholder="e.g. Frontend Developer" className="profile-input" />
         ) : (
-          <p style={{ color: profile.designation ? '#E5E7EB' : '#6B7280', fontSize: 14, margin: 0 }}>{profile.designation || 'Not specified'}</p>
+          <p style={{ color: profile.designation ? 'var(--text-primary)' : 'var(--text-dim)', fontSize: 14, margin: 0 }}>{profile.designation || 'Not specified'}</p>
         )}
       </Block>
 
@@ -1029,7 +1029,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <textarea value={formData.summary} onChange={(e) => setFormData({ ...formData, summary: e.target.value })} placeholder="Write a short professional summary..." className="profile-input" rows={4} style={{ resize: 'vertical' }} />
         ) : (
-          <p style={{ color: profile.summary ? '#9CA3AF' : '#6B7280', fontSize: 14, lineHeight: 1.7, margin: 0 }}>{profile.summary || 'No summary yet.'}</p>
+          <p style={{ color: profile.summary ? 'var(--text-secondary)' : 'var(--text-dim)', fontSize: 14, lineHeight: 1.7, margin: 0 }}>{profile.summary || 'No summary yet.'}</p>
         )}
       </Block>
 
@@ -1042,7 +1042,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
               { label: 'Portfolio', key: 'portfolio', placeholder: 'https://yoursite.com' },
             ].map(({ label, key, placeholder }) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ color: '#6B7280', fontSize: 12, width: 68, flexShrink: 0 }}>{label}</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 12, width: 68, flexShrink: 0 }}>{label}</span>
                 <input type="url" value={formData[key]} onChange={(e) => setFormData({ ...formData, [key]: e.target.value })} placeholder={placeholder} className="profile-input" style={{ flex: 1 }} />
               </div>
             ))}
@@ -1050,25 +1050,25 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {profile.github && (
-              <a href={profile.github} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+              <a href={profile.github} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13, textDecoration: 'none' }}>
                 <GitHubIcon />
                 {profile.github}
               </a>
             )}
             {profile.linkedin && (
-              <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+              <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13, textDecoration: 'none' }}>
                 <LinkedInIcon />
                 {profile.linkedin}
               </a>
             )}
             {profile.portfolio && (
-              <a href={profile.portfolio} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+              <a href={profile.portfolio} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 13, textDecoration: 'none' }}>
                 <PortfolioIcon />
                 {profile.portfolio}
               </a>
             )}
             {!profile.github && !profile.linkedin && !profile.portfolio && (
-              <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No links added yet.</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No links added yet.</p>
             )}
           </div>
         )}
@@ -1080,7 +1080,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         ) : profile.skills?.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{profile.skills.map((s, i) => <span key={i} className="skill-chip">{s}</span>)}</div>
         ) : (
-          <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No skills added yet.</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No skills added yet.</p>
         )}
       </Block>
 
@@ -1088,9 +1088,9 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {formData.experience.map((exp, index) => (
-              <div key={index} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 10, padding: 14 }}>
+              <div key={index} style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ color: '#9CA3AF', fontSize: 12 }}>Entry {index + 1}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Entry {index + 1}</span>
                   {formData.experience.length > 1 && (
                     <button onClick={() => removeExperience(index)} className="delete-btn">Remove</button>
                   )}
@@ -1103,23 +1103,23 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
                 </div>
               </div>
             ))}
-            <button onClick={addExperience} style={{ background: 'none', border: '1px dashed #222634', borderRadius: 8, padding: '10px', color: '#7C5CFF', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={addExperience} style={{ background: 'none', border: '1px dashed var(--border)', borderRadius: 8, padding: '10px', color: 'var(--primary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               + Add Experience
             </button>
           </div>
         ) : profile.experience?.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {profile.experience.map((exp, i) => (
-              <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid rgba(124,92,255,0.3)' }}>
-                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{exp.role}</p>
-                <p style={{ color: '#7C5CFF', fontSize: 13, margin: '0 0 3px' }}>{exp.company}</p>
-                {exp.duration && <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 6px' }}>{exp.duration}</p>}
-                {exp.description && <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, margin: 0 }}>{exp.description}</p>}
+              <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid var(--primary-soft-border)' }}>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{exp.role}</p>
+                <p style={{ color: 'var(--primary)', fontSize: 13, margin: '0 0 3px' }}>{exp.company}</p>
+                {exp.duration && <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '0 0 6px' }}>{exp.duration}</p>}
+                {exp.description && <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>{exp.description}</p>}
               </div>
             ))}
           </div>
         ) : (
-          <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No experience added yet.</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No experience added yet.</p>
         )}
       </Block>
 
@@ -1127,9 +1127,9 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
         {isEditing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {formData.education.map((edu, index) => (
-              <div key={index} style={{ background: '#0B0D12', border: '1px solid #222634', borderRadius: 10, padding: 14 }}>
+              <div key={index} style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ color: '#9CA3AF', fontSize: 12 }}>Entry {index + 1}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Entry {index + 1}</span>
                   {formData.education.length > 1 && (
                     <button onClick={() => removeEducation(index)} className="delete-btn">Remove</button>
                   )}
@@ -1141,22 +1141,22 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
                 </div>
               </div>
             ))}
-            <button onClick={addEducation} style={{ background: 'none', border: '1px dashed #222634', borderRadius: 8, padding: '10px', color: '#7C5CFF', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={addEducation} style={{ background: 'none', border: '1px dashed var(--border)', borderRadius: 8, padding: '10px', color: 'var(--primary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               + Add Education
             </button>
           </div>
         ) : profile.education?.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {profile.education.map((edu, i) => (
-              <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid rgba(34,197,94,0.3)' }}>
-                <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{edu.degree}</p>
-                <p style={{ color: '#22C55E', fontSize: 13, margin: '0 0 3px' }}>{edu.institution}</p>
-                {edu.year && <p style={{ color: '#6B7280', fontSize: 12, margin: 0 }}>{edu.year}</p>}
+              <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid var(--success-soft-border)' }}>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{edu.degree}</p>
+                <p style={{ color: 'var(--success)', fontSize: 13, margin: '0 0 3px' }}>{edu.institution}</p>
+                {edu.year && <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: 0 }}>{edu.year}</p>}
               </div>
             ))}
           </div>
         ) : (
-          <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No education added yet.</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No education added yet.</p>
         )}
       </Block>
 
@@ -1165,21 +1165,21 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>10th %</label>
+                <label style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block', marginBottom: 6 }}>10th %</label>
                 <input type="number" min="0" max="100" step="0.1" value={formData.tenthPercentage} onChange={(e) => setFormData({ ...formData, tenthPercentage: e.target.value })} className="profile-input" placeholder="e.g., 89.5" />
               </div>
               <div>
-                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>12th %</label>
+                <label style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block', marginBottom: 6 }}>12th %</label>
                 <input type="number" min="0" max="100" step="0.1" value={formData.twelfthPercentage} onChange={(e) => setFormData({ ...formData, twelfthPercentage: e.target.value })} className="profile-input" placeholder="e.g., 92.3" />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>CGPA</label>
+                <label style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block', marginBottom: 6 }}>CGPA</label>
                 <input type="number" min="0" max="10" step="0.01" value={formData.cgpa} onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })} className="profile-input" placeholder="e.g., 8.5" />
               </div>
               <div>
-                <label style={{ color: '#6B7280', fontSize: 11, display: 'block', marginBottom: 6 }}>Up to Semester</label>
+                <label style={{ color: 'var(--text-dim)', fontSize: 11, display: 'block', marginBottom: 6 }}>Up to Semester</label>
                 <select value={formData.cgpaSemester} onChange={(e) => setFormData({ ...formData, cgpaSemester: e.target.value })} className="profile-input">
                   <option value="">Select</option>
                   {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s}>Semester {s}</option>)}
@@ -1191,14 +1191,14 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {(profile.tenthPercentage || profile.twelfthPercentage) && (
               <div style={{ display: 'flex', gap: 24 }}>
-                {profile.tenthPercentage && <div><span style={{ color: '#6B7280', fontSize: 12 }}>10th: </span><span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>{profile.tenthPercentage}%</span></div>}
-                {profile.twelfthPercentage && <div><span style={{ color: '#6B7280', fontSize: 12 }}>12th: </span><span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>{profile.twelfthPercentage}%</span></div>}
+                {profile.tenthPercentage && <div><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>10th: </span><span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 500 }}>{profile.tenthPercentage}%</span></div>}
+                {profile.twelfthPercentage && <div><span style={{ color: 'var(--text-dim)', fontSize: 12 }}>12th: </span><span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 500 }}>{profile.twelfthPercentage}%</span></div>}
               </div>
             )}
             {profile.cgpa && (
               <div>
-                <span style={{ color: '#6B7280', fontSize: 12 }}>CGPA: </span>
-                <span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>CGPA: </span>
+                <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 500 }}>
                   {profile.cgpa}
                   {profile.cgpaSemester && profile.cgpaSemester < 8 
                     ? ` upto ${profile.cgpaSemester}${getOrdinal(profile.cgpaSemester)} semester`
@@ -1207,7 +1207,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
               </div>
             )}
             {!profile.tenthPercentage && !profile.twelfthPercentage && !profile.cgpa && (
-              <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No academic details added yet.</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No academic details added yet.</p>
             )}
           </div>
         )}
@@ -1702,7 +1702,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '3rem' }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #222634', borderTopColor: '#7C5CFF', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid var(--border)', borderTopColor: 'var(--primary)', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
       </div>
     );
   }
@@ -1719,7 +1719,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
           <button onClick={exportToWord} disabled={exporting} className="action-btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {exporting ? (
               <>
-                <div style={{ width: 14, height: 14, border: '2px solid #9CA3AF', borderTopColor: '#7C5CFF', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                <div style={{ width: 14, height: 14, border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
                 Generating...
               </>
             ) : (
@@ -1735,8 +1735,8 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       </div>
 
       {showForm && (
-        <div style={{ background: '#171B24', border: '1px solid #222634', borderRadius: 12, padding: '1.5rem', marginBottom: 20 }}>
-          <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Upload Certificate</p>
+        <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '1.5rem', marginBottom: 20 }}>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Upload Certificate</p>
           <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <span className="section-label">Title *</span>
@@ -1776,8 +1776,8 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
             <div>
               <span className="section-label">Participation Date *</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: '#7C5CFF' }} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: 'var(--primary)' }} />
                   Date range (from – to)
                 </label>
               </div>
@@ -1785,12 +1785,12 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
                 <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="profile-input" required style={{ flex: 1 }} />
                 {isDateRange && <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="profile-input" style={{ flex: 1 }} />}
               </div>
-              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
             </div>
 
             <div>
               <span className="section-label">Image *</span>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -1798,9 +1798,9 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
                 <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".jpg,.jpeg,.png,.gif,.webp" />
               </label>
               {selectedFile && (
-                <button type="button" onClick={clearFile} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#EF4444', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                <button type="button" onClick={clearFile} style={{ marginLeft: 10, background: 'none', border: 'none', color: 'var(--danger)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
               )}
-              {previewUrl && <img src={previewUrl} alt="Preview" style={{ display: 'block', maxHeight: 100, marginTop: 10, borderRadius: 8, border: '1px solid #222634' }} />}
+              {previewUrl && <img src={previewUrl} alt="Preview" style={{ display: 'block', maxHeight: 100, marginTop: 10, borderRadius: 8, border: '1px solid var(--border)' }} />}
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1814,7 +1814,7 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
       {certificates.length === 0 ? (
         <EmptyState
           icon={
-            <svg width="22" height="22" fill="none" stroke="#6B7280" viewBox="0 0 24 24">
+            <svg width="22" height="22" fill="none" stroke="var(--text-dim)" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           }
@@ -1829,15 +1829,15 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
             <div key={cert._id} className="cert-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
-                  <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{cert.title || 'Untitled'}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>{cert.title || 'Untitled'}</p>
                   {!isStaffView && (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      {cert.semester && <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>}
+                      {cert.semester && <p style={{ color: 'var(--text-dim)', fontSize: 11, margin: 0 }}>Semester {cert.semester}</p>}
                       {cert.category && (
                         <span style={{
-                          background: cert.category === 'extra curricular' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)',
-                          border: cert.category === 'extra curricular' ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(59,130,246,0.3)',
-                          color: cert.category === 'extra curricular' ? '#FBBF24' : '#60A5FA',
+                          background: cert.category === 'extra curricular' ? 'var(--warning-soft)' : 'var(--primary-soft)',
+                          border: cert.category === 'extra curricular' ? '1px solid var(--warning-soft-border)' : '1px solid var(--primary-soft-border)',
+                          color: cert.category === 'extra curricular' ? 'var(--warning)' : 'var(--primary)',
                           padding: '2px 8px',
                           borderRadius: 999,
                           fontSize: 10,
@@ -1852,19 +1852,19 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
                 </div>
                 {isOwnProfile && (
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => toggleDropdown(cert._id)} className="delete-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}>⋮</button>
+                    <button onClick={() => toggleDropdown(cert._id)} className="delete-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: 'var(--text-muted)' }}>⋮</button>
                     {(activeDropdownId === cert._id || closingDropdownId === cert._id) && (
-                      <div style={{ position: 'absolute', right: 0, top: 24, background: '#171B24', border: '1px solid #222634', borderRadius: 8, zIndex: 10, minWidth: 90, animation: closingDropdownId === cert._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out' }}>
-                        <button onClick={() => handleEdit(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#E5E7EB', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Edit</button>
-                        <button onClick={() => handleDownload(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#E5E7EB', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Download</button>
-                        <button onClick={() => handleDelete(cert._id)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Delete</button>
+                      <div style={{ position: 'absolute', right: 0, top: 24, background: 'var(--dropdown-bg)', border: '1px solid var(--dropdown-border)', borderRadius: 8, zIndex: 10, minWidth: 90, animation: closingDropdownId === cert._id ? 'dropdownOut 0.15s ease-out forwards' : 'dropdownIn 0.15s ease-out' }}>
+                        <button onClick={() => handleEdit(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Edit</button>
+                        <button onClick={() => handleDownload(cert)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Download</button>
+                        <button onClick={() => handleDelete(cert._id)} style={{ display: 'block', width: '100%', padding: '6px 16px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Delete</button>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              {cert.issuedBy && <p style={{ color: '#7C5CFF', fontSize: 13, margin: '0 0 4px' }}>{cert.issuedBy}</p>}
-              <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>{cert.description}</p>
+              {cert.issuedBy && <p style={{ color: 'var(--primary)', fontSize: 13, margin: '0 0 4px' }}>{cert.issuedBy}</p>}
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>{cert.description}</p>
               {cert.media?.[0]?.url && (
                 <div style={{ marginBottom: 10, cursor: 'pointer', overflow: 'hidden', borderRadius: 8 }} onClick={() => { setSelectedCertificate(cert); setModalOpen(true); }}>
                   <img src={cert.media[0].url} alt={cert.title} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8, transition: 'transform 0.3s' }} onMouseOver={(e) => (e.target.style.transform = 'scale(1.02)')} onMouseOut={(e) => (e.target.style.transform = 'scale(1)')} />
@@ -1876,9 +1876,9 @@ function CertificateSection({ userId, isOwnProfile, showAlert, student, loggedIn
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Posted: {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString('en-GB') : 'Recent'}</p>
+                <p style={{ color: 'var(--text-dim)', fontSize: 11, margin: 0 }}>Posted: {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString('en-GB') : 'Recent'}</p>
                 {cert.participationDate?.from && (
-                  <p style={{ color: '#10B981', fontSize: 11, margin: 0, fontWeight: 500 }}>
+                  <p style={{ color: 'var(--success)', fontSize: 11, margin: 0, fontWeight: 500 }}>
                     {new Date(cert.participationDate.from).toLocaleDateString('en-GB')}
                     {cert.participationDate.to && ` – ${new Date(cert.participationDate.to).toLocaleDateString('en-GB')}`}
                   </p>
@@ -2056,8 +2056,8 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
             width: 32,
             height: 32,
             borderRadius: '50%',
-            border: '2px solid #222634',
-            borderTopColor: '#22C55E',
+            border: '2px solid var(--border)',
+            borderTopColor: 'var(--success)',
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto',
           }}
@@ -2078,14 +2078,14 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
       {showForm && (
         <div
           style={{
-            background: '#171B24',
-            border: '1px solid #222634',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
             borderRadius: 12,
             padding: '1.5rem',
             marginBottom: 20,
           }}
         >
-          <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, marginBottom: 16 }}>
             Upload Project
           </p>
           <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -2097,7 +2097,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
               <div key={key}>
                 <span
                   style={{
-                    color: '#6B7280',
+                    color: 'var(--text-dim)',
                     fontSize: 11,
                     letterSpacing: '0.06em',
                     textTransform: 'uppercase',
@@ -2119,7 +2119,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
             <div>
               <span
                 style={{
-                  color: '#6B7280',
+                  color: 'var(--text-dim)',
                   fontSize: 11,
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
@@ -2141,7 +2141,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
             <div>
               <span
                 style={{
-                  color: '#6B7280',
+                  color: 'var(--text-dim)',
                   fontSize: 11,
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
@@ -2166,7 +2166,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
             <div>
               <span
                 style={{
-                  color: '#6B7280',
+                  color: 'var(--text-dim)',
                   fontSize: 11,
                   letterSpacing: '0.06em',
                   textTransform: 'uppercase',
@@ -2181,12 +2181,12 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  background: '#0B0D12',
-                  border: '1px solid #222634',
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
                   borderRadius: 8,
                   padding: '8px 14px',
                   cursor: 'pointer',
-                  color: '#9CA3AF',
+                  color: 'var(--text-secondary)',
                   fontSize: 13,
                 }}
               >
@@ -2208,7 +2208,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                 />
               </label>
               {selectedFiles.length > 0 && (
-                <span style={{ marginLeft: 10, color: '#9CA3AF', fontSize: 12 }}>
+                <span style={{ marginLeft: 10, color: 'var(--text-secondary)', fontSize: 12 }}>
                   {selectedFiles.length} selected
                 </span>
               )}
@@ -2231,7 +2231,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                           height: 64,
                           objectFit: 'cover',
                           borderRadius: 6,
-                          border: '1px solid #222634',
+                          border: '1px solid var(--border)',
                         }}
                       />
                       <button
@@ -2243,7 +2243,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                           right: 3,
                           width: 18,
                           height: 18,
-                          background: '#EF4444',
+                          background: 'var(--danger)',
                           border: 'none',
                           borderRadius: '50%',
                           color: '#fff',
@@ -2292,7 +2292,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
       {projects.length === 0 ? (
         <EmptyState
           icon={
-            <svg width="22" height="22" fill="none" stroke="#6B7280" viewBox="0 0 24 24">
+            <svg width="22" height="22" fill="none" stroke="var(--text-dim)" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -2312,11 +2312,11 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
             <div key={project._id} className="cert-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
-                  <p style={{ color: '#E5E7EB', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 14, margin: '0 0 3px' }}>
                     {project.title || 'Untitled'}
                   </p>
                   {project.semester && (
-                    <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>Semester {project.semester}</p>
+                    <p style={{ color: 'var(--text-dim)', fontSize: 11, margin: 0 }}>Semester {project.semester}</p>
                   )}
                 </div>
                 {isOwnProfile && (
@@ -2324,7 +2324,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                     <button
                       onClick={() => toggleDropdown(project._id)}
                       className="delete-btn"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: '#9CA3AF' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', fontSize: 16, color: 'var(--text-muted)' }}
                     >
                       ⋮
                     </button>
@@ -2334,8 +2334,8 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                           position: 'absolute',
                           right: 0,
                           top: 24,
-                          background: '#171B24',
-                          border: '1px solid #222634',
+                          background: 'var(--dropdown-bg)',
+                          border: '1px solid var(--dropdown-border)',
                           borderRadius: 8,
                           zIndex: 10,
                           minWidth: 90,
@@ -2350,7 +2350,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                             padding: '6px 16px',
                             background: 'none',
                             border: 'none',
-                            color: '#E5E7EB',
+                            color: 'var(--text-primary)',
                             cursor: 'pointer',
                             textAlign: 'left',
                             fontSize: 13,
@@ -2366,7 +2366,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                             padding: '6px 16px',
                             background: 'none',
                             border: 'none',
-                            color: '#E5E7EB',
+                            color: 'var(--text-primary)',
                             cursor: 'pointer',
                             textAlign: 'left',
                             fontSize: 13,
@@ -2382,7 +2382,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                             padding: '6px 16px',
                             background: 'none',
                             border: 'none',
-                            color: '#EF4444',
+                            color: 'var(--danger)',
                             cursor: 'pointer',
                             textAlign: 'left',
                             fontSize: 13,
@@ -2395,7 +2395,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                   </div>
                 )}
               </div>
-              <p style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
                 {project.description}
               </p>
               {project.media?.length > 0 && (
@@ -2426,7 +2426,7 @@ function ProjectSection({ userId, isOwnProfile, showAlert }) {
                   ))}
                 </div>
               )}
-              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+              <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 4 }}>
                 {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'Recent'}
               </p>
             </div>
@@ -2473,8 +2473,8 @@ function EmptyState({ icon, title, desc, action, actionLabel }) {
           width: 52,
           height: 52,
           borderRadius: '50%',
-          background: '#171B24',
-          border: '1px solid #222634',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2483,8 +2483,8 @@ function EmptyState({ icon, title, desc, action, actionLabel }) {
       >
         {icon}
       </div>
-      <p style={{ color: '#E5E7EB', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>{title}</p>
-      <p style={{ color: '#6B7280', fontSize: 13, marginBottom: action ? 18 : 0 }}>{desc}</p>
+      <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>{title}</p>
+      <p style={{ color: 'var(--text-dim)', fontSize: 13, marginBottom: action ? 18 : 0 }}>{desc}</p>
       {action && (
         <button onClick={action} className="action-btn-primary">
           {actionLabel}
@@ -2629,7 +2629,7 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0,0,0,0.8)',
+        background: 'var(--modal-backdrop)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -2639,8 +2639,8 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView
     >
       <div
         style={{
-          background: '#12151C',
-          border: '1px solid #222634',
+          background: 'var(--modal-bg)',
+          border: '1px solid var(--modal-border)',
           borderRadius: 16,
           maxWidth: 500,
           width: '100%',
@@ -2651,10 +2651,10 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h3 style={{ color: '#E5E7EB', fontSize: 16, fontWeight: 600, margin: 0 }}>
+          <h3 style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>
             Edit {type === 'certificate' ? 'Certificate' : 'Project'}
           </h3>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 20 }}>✕</button>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -2677,20 +2677,20 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView
             <div>
               <span className="section-label">Participation Date *</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9CA3AF', fontSize: 13, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: '#7C5CFF' }} /> Date range (from – to)
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={isDateRange} onChange={(e) => setIsDateRange(e.target.checked)} style={{ accentColor: 'var(--primary)' }} /> Date range (from – to)
                 </label>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="profile-input" required style={{ flex: 1 }} />
                 {isDateRange && <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="profile-input" style={{ flex: 1 }} />}
               </div>
-              <p style={{ color: '#6B7280', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
+              <p style={{ color: 'var(--text-dim)', fontSize: 10, marginTop: 4 }}>Format: DD/MM/YYYY</p>
             </div>
           )}
           <div>
             <span className="section-label">Images (optional – replace all)</span>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0B0D12', border: '1px solid #222634', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               {selectedFiles.length ? `${selectedFiles.length} selected` : 'Select Images'}
               <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".jpg,.jpeg,.png,.gif,.webp" multiple />
@@ -2699,8 +2699,8 @@ function EditModal({ isOpen, onClose, item, type, onSave, showAlert, isStaffView
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8, marginTop: 10 }}>
                 {previewUrls.map((url, i) => (
                   <div key={i} style={{ position: 'relative' }}>
-                    <img src={url} alt={`preview ${i+1}`} style={{ width: '100%', height: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid #222634' }} />
-                    <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, background: '#EF4444', border: 'none', borderRadius: '50%', color: '#fff', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                    <img src={url} alt={`preview ${i+1}`} style={{ width: '100%', height: 70, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                    <button type="button" onClick={() => removeFile(i)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, background: 'var(--danger)', border: 'none', borderRadius: '50%', color: '#fff', fontSize: 12, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -2837,7 +2837,7 @@ export default function ProfilePage() {
       <div
         style={{
           minHeight: '100vh',
-          background: '#0B0D12',
+          background: 'var(--background)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2849,8 +2849,8 @@ export default function ProfilePage() {
               width: 48,
               height: 48,
               borderRadius: '50%',
-              border: '2px solid #222634',
-              borderTopColor: '#7C5CFF',
+              border: '2px solid var(--border)',
+              borderTopColor: 'var(--primary)',
               animation: 'spin 0.8s linear infinite',
               margin: '0 auto',
             }}
@@ -2858,7 +2858,7 @@ export default function ProfilePage() {
           <p
             style={{
               marginTop: 16,
-              color: '#6B7280',
+              color: 'var(--text-dim)',
               fontSize: 14,
               letterSpacing: '0.05em',
             }}
@@ -2876,7 +2876,7 @@ export default function ProfilePage() {
       <div
         style={{
           minHeight: '100vh',
-          background: '#0B0D12',
+          background: 'var(--background)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2885,8 +2885,8 @@ export default function ProfilePage() {
       >
         <div
           style={{
-            background: '#12151C',
-            border: '1px solid #222634',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
             borderRadius: 16,
             padding: '2.5rem',
             maxWidth: 420,
@@ -2899,31 +2899,31 @@ export default function ProfilePage() {
               width: 64,
               height: 64,
               borderRadius: '50%',
-              background: 'rgba(239,68,68,0.1)',
+              background: 'var(--danger-soft)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 1.5rem',
             }}
           >
-            <svg width="28" height="28" fill="none" stroke="#EF4444" viewBox="0 0 24 24">
+            <svg width="28" height="28" fill="none" stroke="var(--danger)" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h3 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 600, marginBottom: 8 }}>User Not Found</h3>
-          <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 24 }}>
+          <h3 style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 600, marginBottom: 8 }}>User Not Found</h3>
+          <p style={{ color: 'var(--text-dim)', fontSize: 14, marginBottom: 24 }}>
             No user found with ID{' '}
-            <code style={{ background: '#171B24', padding: '2px 8px', borderRadius: 4, color: '#9CA3AF' }}>{identifier}</code>
+            <code style={{ background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 4, color: 'var(--text-secondary)' }}>{identifier}</code>
           </p>
-          <button onClick={() => router.push('/feed')} style={{ width: '100%', background: '#7C5CFF', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', marginBottom: 8, fontSize: 14 }}>Back to Feed</button>
-          <button onClick={fetchUserProfile} style={{ width: '100%', background: 'transparent', color: '#9CA3AF', border: '1px solid #222634', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>Try Again</button>
+          <button onClick={() => router.push('/feed')} style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', marginBottom: 8, fontSize: 14 }}>Back to Feed</button>
+          <button onClick={fetchUserProfile} style={{ width: '100%', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 0', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>Try Again</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0D12' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -2932,61 +2932,61 @@ export default function ProfilePage() {
         @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes slideOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-20px) scale(0.95); } }
         .profile-input {
-          width: 100%; background: #0B0D12; border: 1px solid #222634;
-          border-radius: 8px; padding: 10px 14px; color: #E5E7EB;
+          width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+          border-radius: 8px; padding: 10px 14px; color: var(--input-text);
           font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box;
           font-family: inherit;
         }
-        .profile-input:focus { border-color: #7C5CFF; }
-        .profile-input::placeholder { color: #6B7280; }
+        .profile-input:focus { border-color: var(--input-focus-border); }
+        .profile-input::placeholder { color: var(--input-placeholder); }
         .tab-btn {
           background: none; border: none; cursor: pointer; font-size: 12px;
           font-weight: 500; letter-spacing: 0.08em; padding: 14px 20px;
           transition: color 0.2s; position: relative; text-transform: uppercase;
           font-family: inherit;
         }
-        .tab-btn.active { color: #E5E7EB; }
-        .tab-btn.inactive { color: #6B7280; }
-        .tab-btn.inactive:hover { color: #9CA3AF; }
+        .tab-btn.active { color: var(--text-primary); }
+        .tab-btn.inactive { color: var(--text-muted); }
+        .tab-btn.inactive:hover { color: var(--text-secondary); }
         .tab-btn.active::after {
           content: ''; position: absolute; bottom: 0; left: 20px; right: 20px;
-          height: 2px; background: #7C5CFF; border-radius: 2px;
+          height: 2px; background: var(--primary); border-radius: 2px;
         }
         .action-btn-primary {
-          background: #7C5CFF; color: #fff; border: none; border-radius: 8px;
+          background: var(--btn-primary-bg); color: var(--btn-primary-text); border: none; border-radius: 8px;
           padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
           transition: background 0.2s; letter-spacing: 0.02em; font-family: inherit;
         }
-        .action-btn-primary:hover { background: #6d4fe0; }
+        .action-btn-primary:hover { background: var(--btn-primary-hover-bg); }
         .action-btn-ghost {
-          background: transparent; color: #9CA3AF; border: 1px solid #222634; border-radius: 8px;
+          background: var(--btn-ghost-bg); color: var(--btn-ghost-text); border: 1px solid var(--btn-ghost-border); border-radius: 8px;
           padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
           transition: all 0.2s; letter-spacing: 0.02em; font-family: inherit;
         }
-        .action-btn-ghost:hover { border-color: #9CA3AF; color: #E5E7EB; }
-        .profile-card { background: #12151C; border: 1px solid #222634; border-radius: 16px; animation: fadeUp 0.4s ease; }
+        .action-btn-ghost:hover { border-color: var(--btn-ghost-hover-border); color: var(--btn-ghost-hover-text); }
+        .profile-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 16px; animation: fadeUp 0.4s ease; }
         .tag-chip {
-          display: inline-block; background: #171B24; border: 1px solid #222634;
-          color: #9CA3AF; padding: 3px 10px; border-radius: 999px; font-size: 12px;
+          display: inline-block; background: var(--tag-bg); border: 1px solid var(--tag-border);
+          color: var(--tag-text); padding: 3px 10px; border-radius: 999px; font-size: 12px;
           letter-spacing: 0.02em;
         }
         .skill-chip {
-          display: inline-block; background: rgba(124,92,255,0.1); border: 1px solid rgba(124,92,255,0.2);
-          color: #a78bfa; padding: 4px 12px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;
+          display: inline-block; background: var(--skill-bg); border: 1px solid var(--skill-border);
+          color: var(--skill-text); padding: 4px 12px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;
         }
         .tech-chip {
-          display: inline-block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15);
-          color: #4ade80; padding: 4px 10px; border-radius: 6px; font-size: 12px;
+          display: inline-block; background: var(--tech-bg); border: 1px solid var(--tech-border);
+          color: var(--tech-text); padding: 4px 10px; border-radius: 6px; font-size: 12px;
         }
-        .delete-btn { background: none; border: none; cursor: pointer; color: #6B7280; font-size: 13px; transition: color 0.2s; font-family: inherit; padding: 4px; }
-        .delete-btn:hover { color: #EF4444; }
+        .delete-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; transition: color 0.2s; font-family: inherit; padding: 4px; }
+        .delete-btn:hover { color: var(--danger); }
         .cert-card {
-          background: #171B24; border: 1px solid #222634; border-radius: 12px; padding: 18px;
+          background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px;
           transition: border-color 0.2s;
         }
-        .cert-card:hover { border-color: #2d3148; }
+        .cert-card:hover { border-color: var(--card-hover-border); }
         .section-label {
-          color: #6B7280; font-size: 11px; text-transform: uppercase;
+          color: var(--text-dim); font-size: 11px; text-transform: uppercase;
           letter-spacing: 0.08em; margin-bottom: 10px; display: block;
         }
         @media (max-width: 1024px) {
@@ -3003,33 +3003,33 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="profile-card" style={{ padding: '1.75rem 1.5rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                <div style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px', background: 'linear-gradient(135deg, rgba(124,92,255,0.25), rgba(124,92,255,0.05))', border: '1px solid rgba(124,92,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 28, fontWeight: 700, color: '#7C5CFF' }}>{user.name?.charAt(0).toUpperCase() || 'U'}</span>
+                <div style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px', background: 'linear-gradient(135deg, var(--primary-soft), var(--primary-soft-border))', border: '1px solid var(--primary-soft-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--primary)' }}>{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                 </div>
-                <h1 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>{user.name || 'Unknown'}</h1>
-                <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 10px', letterSpacing: '0.06em' }}>
+                <h1 style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>{user.name || 'Unknown'}</h1>
+                <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '0 0 10px', letterSpacing: '0.06em' }}>
                   {user.role === 'staff' ? user.staffId : user.registerNumber}
                 </p>
                 {user.department && (
-                  <span style={{ display: 'inline-block', background: 'rgba(124,92,255,0.1)', border: '1px solid rgba(124,92,255,0.2)', color: '#a78bfa', padding: '3px 12px', borderRadius: 999, fontSize: 11, fontWeight: 500 }}>{user.department}</span>
+                  <span style={{ display: 'inline-block', background: 'var(--primary-soft)', border: '1px solid var(--primary-soft-border)', color: 'var(--primary)', padding: '3px 12px', borderRadius: 999, fontSize: 11, fontWeight: 500 }}>{user.department}</span>
                 )}
                 {user.batchYear && user.role === 'student' && (
-                  <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#171B24', border: '1px solid #222634', borderRadius: 8, padding: '5px 14px' }}>
-                    <span style={{ color: '#6B7280', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Batch</span>
-                    <span style={{ color: '#E5E7EB', fontSize: 12, fontWeight: 600 }}>{user.batchYear}</span>
+                  <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 14px' }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Batch</span>
+                    <span style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 600 }}>{user.batchYear}</span>
                   </div>
                 )}
               </div>
 
               {!isStaffView && (
                 <>
-                  <div style={{ height: 1, background: '#222634', marginBottom: '1.25rem' }} />
+                  <div style={{ height: 1, background: 'var(--border)', marginBottom: '1.25rem' }} />
                   <div style={{ marginBottom: 16 }}>
                     <span className="section-label">About</span>
                     {isEditing ? (
                       <textarea value={editData.bio} onChange={(e) => setEditData({ ...editData, bio: e.target.value })} className="profile-input" rows={3} placeholder="Write about yourself..." style={{ resize: 'vertical' }} />
                     ) : (
-                      <p style={{ color: user.profile?.bio ? '#9CA3AF' : '#6B7280', fontSize: 13, lineHeight: 1.7, margin: 0 }}>{user.profile?.bio || 'No bio yet.'}</p>
+                      <p style={{ color: user.profile?.bio ? 'var(--text-secondary)' : 'var(--text-dim)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>{user.profile?.bio || 'No bio yet.'}</p>
                     )}
                   </div>
                   <div style={{ marginBottom: 16 }}>
@@ -3039,12 +3039,12 @@ export default function ProfilePage() {
                     ) : user.profile?.interests?.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{user.profile.interests.map((interest, index) => <span key={index} className="tag-chip">{interest}</span>)}</div>
                     ) : (
-                      <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>No interests yet.</p>
+                      <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: 0 }}>No interests yet.</p>
                     )}
                   </div>
                   {isOwnProfile && (
                     <>
-                      <div style={{ height: 1, background: '#222634', marginBottom: '1rem' }} />
+                      <div style={{ height: 1, background: 'var(--border)', marginBottom: '1rem' }} />
                       {isEditing ? (
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={handleSave} className="action-btn-primary" style={{ flex: 1 }}>Save</button>
@@ -3062,7 +3062,7 @@ export default function ProfilePage() {
 
           {/* RIGHT COLUMN */}
           <div className="profile-card" style={{ overflow: 'hidden' }}>
-            <div style={{ borderBottom: '1px solid #222634', display: 'flex' }}>
+            <div style={{ borderBottom: '1px solid var(--border)', display: 'flex' }}>
               {!isStaffView ? (
                 <>
                   <button onClick={() => setActiveTab('certificates')} className={`tab-btn ${activeTab === 'certificates' ? 'active' : 'inactive'}`}>Certificates</button>

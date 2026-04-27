@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// ===================== Custom Alert System (unchanged) =====================
+// ===================== Custom Alert System (colors replaced) =====================
 function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
   const [isClosing, setIsClosing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timerSeconds);
@@ -36,18 +36,15 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
   };
 
   const isConfirm = type === 'confirm';
-  const borderColor = isConfirm ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.3)';
-  const textColor = isConfirm ? '#FCA5A5' : '#10B981';
-  const buttonBg = isConfirm ? '#DC2626' : '#7C5CFF';
+  const borderColor = isConfirm ? 'var(--danger)' : 'var(--success)';
+  const textColor = isConfirm ? 'var(--danger)' : 'var(--success)';
+  const buttonBg = isConfirm ? 'var(--danger)' : 'var(--primary)';
 
   return (
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(8px)',
         zIndex: 1000,
@@ -60,7 +57,7 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
     >
       <div
         style={{
-          background: '#12151C',
+          background: 'var(--modal-bg)',
           border: `1px solid ${borderColor}`,
           borderRadius: 12,
           padding: '1.5rem',
@@ -99,7 +96,7 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
                   transition: 'background 0.2s',
                   opacity: !canConfirm ? 0.6 : 1,
                 }}
-                onMouseOver={(e) => { if (canConfirm) e.target.style.background = '#B91C1C'; }}
+                onMouseOver={(e) => { if (canConfirm) e.target.style.background = 'var(--danger-hover)'; }}
                 onMouseOut={(e) => { if (canConfirm) e.target.style.background = buttonBg; }}
               >
                 Yes, Delete {!canConfirm && `(${timeLeft}s)`}
@@ -108,8 +105,8 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
                 onClick={() => handleClose(false)}
                 style={{
                   background: 'transparent',
-                  border: '1px solid #222634',
-                  color: '#9CA3AF',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
                   borderRadius: 8,
                   padding: '8px 20px',
                   cursor: 'pointer',
@@ -117,7 +114,7 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
                   fontWeight: 500,
                   transition: 'all 0.2s',
                 }}
-                onMouseOver={(e) => (e.target.style.background = '#171B24')}
+                onMouseOver={(e) => (e.target.style.background = 'var(--surface-2)')}
                 onMouseOut={(e) => (e.target.style.background = 'transparent')}
               >
                 Cancel
@@ -137,7 +134,7 @@ function CustomAlert({ message, type, onConfirm, onCancel, timerSeconds = 0 }) {
                 fontWeight: 500,
                 transition: 'background 0.2s',
               }}
-              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
+              onMouseOver={(e) => (e.target.style.background = 'var(--primary-hover)')}
               onMouseOut={(e) => (e.target.style.background = buttonBg)}
             >
               OK
@@ -217,7 +214,6 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [dobError, setDobError] = useState('');
 
-  // New states for real‑time validation
   const [registerNumberError, setRegisterNumberError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isCheckingRegNo, setIsCheckingRegNo] = useState(false);
@@ -302,7 +298,6 @@ export default function RegisterPage() {
     return true;
   };
 
-  // Validate register number pattern and match with batch year
   const validateRegisterNumberPattern = useCallback((regNo, batchYear) => {
     if (!regNo) {
       setRegisterNumberError('');
@@ -326,7 +321,6 @@ export default function RegisterPage() {
     return true;
   }, []);
 
-  // Debounced check for register number existence
   const checkRegisterNumberExists = useCallback(async (regNo) => {
     if (!regNo || !/^\d{12}$/.test(regNo)) return;
     setIsCheckingRegNo(true);
@@ -337,19 +331,16 @@ export default function RegisterPage() {
       if (data.exists) {
         setRegisterNumberError('This register number is already registered');
       } else {
-        // Clear existence error if pattern is valid
         if (validateRegisterNumberPattern(regNo, formData.batchYear)) {
           setRegisterNumberError('');
         }
       }
     } catch {
-      // Ignore errors, assume not exists for safety? Or keep previous state.
     } finally {
       setIsCheckingRegNo(false);
     }
   }, [formData.batchYear, validateRegisterNumberPattern]);
 
-  // Debounced check for email existence
   const checkEmailExists = useCallback(async (email) => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
     setIsCheckingEmail(true);
@@ -363,13 +354,11 @@ export default function RegisterPage() {
         setEmailError('');
       }
     } catch {
-      // Ignore
     } finally {
       setIsCheckingEmail(false);
     }
   }, []);
 
-  // Trigger debounced checks
   useEffect(() => {
     if (regNoCheckTimer.current) clearTimeout(regNoCheckTimer.current);
     if (formData.registerNumber.length === 12 && validateRegisterNumberPattern(formData.registerNumber, formData.batchYear)) {
@@ -377,7 +366,7 @@ export default function RegisterPage() {
         checkRegisterNumberExists(formData.registerNumber);
       }, 500);
     } else {
-      setRegNoExists(false); // Reset existence state if pattern invalid
+      setRegNoExists(false);
     }
     return () => clearTimeout(regNoCheckTimer.current);
   }, [formData.registerNumber, formData.batchYear, checkRegisterNumberExists, validateRegisterNumberPattern]);
@@ -398,7 +387,6 @@ export default function RegisterPage() {
     const value = e.target.value.replace(/\D/g, '').slice(0, 12);
     setFormData({ ...formData, registerNumber: value });
 
-    // Auto‑detect batch year from register number digits 5-6
     if (value.length >= 6) {
       const batchCode = value.substring(4, 6);
       const batchYear = 2000 + parseInt(batchCode, 10);
@@ -410,7 +398,6 @@ export default function RegisterPage() {
       }
     }
 
-    // Clear any error when user types
     if (error) setError('');
   };
 
@@ -426,13 +413,10 @@ export default function RegisterPage() {
     if (error) setError('');
   };
 
-  // Overall form validity for button disable
   const isFormValid = () => {
-    // Basic required fields
     if (!formData.registerNumber || !formData.name || !formData.email || !formData.dob || !formData.password || !formData.confirmPassword) {
       return false;
     }
-    // Pattern validation
     if (registerNumberError || regNoExists) return false;
     if (emailError || emailExists) return false;
     if (dobError) return false;
@@ -449,7 +433,6 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    // Double‑check batch year match (should already be validated)
     const batchCodeFromReg = formData.registerNumber.substring(4, 6);
     const expectedBatchCode = String(formData.batchYear).slice(-2);
     if (batchCodeFromReg !== expectedBatchCode) {
@@ -480,17 +463,17 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
         <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-          <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
-            <div style={{ color: '#7C5CFF', marginBottom: '1.5rem' }}>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 16, padding: '2rem' }}>
+            <div style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>
               <svg style={{ width: 64, height: 64, margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 style={{ color: '#E5E7EB', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Registration Successful!</h3>
-            <p style={{ color: '#9CA3AF', marginBottom: 24 }}>You will be redirected to login page shortly.</p>
-            <Link href="/login" style={{ display: 'inline-block', background: '#7C5CFF', color: '#fff', padding: '10px 20px', borderRadius: 8, textDecoration: 'none', fontWeight: 500 }}>
+            <h3 style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Registration Successful!</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>You will be redirected to login page shortly.</p>
+            <Link href="/login" style={{ display: 'inline-block', background: 'var(--primary)', color: '#fff', padding: '10px 20px', borderRadius: 8, textDecoration: 'none', fontWeight: 500 }}>
               Go to Login
             </Link>
           </div>
@@ -500,9 +483,16 @@ export default function RegisterPage() {
   }
 
   const inputStyle = {
-    width: '100%', background: '#0B0D12', border: '1px solid #222634',
-    borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
-    outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
+    width: '100%',
+    background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)',
+    borderRadius: 8,
+    padding: '10px 14px',
+    color: 'var(--input-text)',
+    fontSize: 14,
+    outline: 'none',
+    transition: 'border-color 0.2s',
+    boxSizing: 'border-box',
     fontFamily: 'inherit'
   };
 
@@ -515,32 +505,32 @@ export default function RegisterPage() {
     position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
     background: 'none', border: 'none', cursor: 'pointer',
     padding: 0, display: 'flex', alignItems: 'center',
-    color: '#6B7280'
+    color: 'var(--text-dim)'
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div style={{ maxWidth: 480, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ color: '#E5E7EB', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Student Registration</h2>
-          <p style={{ color: '#6B7280', fontSize: 14 }}>
+          <h2 style={{ color: 'var(--text-primary)', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Student Registration</h2>
+          <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>
             Or{' '}
-            <Link href="/login" style={{ color: '#7C5CFF', textDecoration: 'none' }}>
+            <Link href="/login" style={{ color: 'var(--link)', textDecoration: 'none' }}>
               sign in to your account
             </Link>
           </p>
         </div>
 
-        <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
+        <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 16, padding: '2rem' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {error && (
-              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', color: '#F87171', fontSize: 14 }}>
+              <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: 8, padding: '12px 16px', color: 'var(--danger)', fontSize: 14 }}>
                 {error}
               </div>
             )}
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Register Number * (12 digits)</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Register Number * (12 digits)</label>
               <input
                 name="registerNumber"
                 type="text"
@@ -551,21 +541,21 @@ export default function RegisterPage() {
                 maxLength={12}
                 style={{
                   ...inputStyle,
-                  borderColor: registerNumberError || regNoExists ? '#EF4444' : '#222634',
+                  borderColor: registerNumberError || regNoExists ? 'var(--danger)' : 'var(--border)',
                 }}
               />
-              {isCheckingRegNo && <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Checking availability...</p>}
-              {registerNumberError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{registerNumberError}</p>}
+              {isCheckingRegNo && <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>Checking availability...</p>}
+              {registerNumberError && <p style={{ color: 'var(--danger)', fontSize: 11, marginTop: 4 }}>{registerNumberError}</p>}
               {!registerNumberError && !regNoExists && formData.registerNumber.length === 12 && (
-                <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Valid register number</p>
+                <p style={{ color: 'var(--success)', fontSize: 11, marginTop: 4 }}>✓ Valid register number</p>
               )}
-              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>
                 Format: 9513 + 2‑digit batch year + 6 digits
               </p>
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Full Name *</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Full Name *</label>
               <input
                 name="name"
                 type="text"
@@ -578,7 +568,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Email Address *</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Email Address *</label>
               <input
                 name="email"
                 type="email"
@@ -588,35 +578,35 @@ export default function RegisterPage() {
                 placeholder="your@email.com"
                 style={{
                   ...inputStyle,
-                  borderColor: emailError || emailExists ? '#EF4444' : '#222634',
+                  borderColor: emailError || emailExists ? 'var(--danger)' : 'var(--border)',
                 }}
               />
-              {isCheckingEmail && <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>Checking email...</p>}
-              {emailError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{emailError}</p>}
+              {isCheckingEmail && <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>Checking email...</p>}
+              {emailError && <p style={{ color: 'var(--danger)', fontSize: 11, marginTop: 4 }}>{emailError}</p>}
               {!emailError && !emailExists && formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
-                <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Email available</p>
+                <p style={{ color: 'var(--success)', fontSize: 11, marginTop: 4 }}>✓ Email available</p>
               )}
-              <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>We'll send important notifications to this email</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>We'll send important notifications to this email</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Date of Birth *</label>
+                <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Date of Birth *</label>
                 <input
                   name="dob"
                   type="date"
                   required
                   value={formData.dob}
                   onChange={handleChange}
-                  style={{ ...inputStyle, borderColor: dobError ? '#EF4444' : '#222634' }}
+                  style={{ ...inputStyle, borderColor: dobError ? 'var(--danger)' : 'var(--border)' }}
                 />
-                {dobError && <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>{dobError}</p>}
+                {dobError && <p style={{ color: 'var(--danger)', fontSize: 11, marginTop: 4 }}>{dobError}</p>}
                 {!dobError && formData.dob && (
-                  <p style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>✓ Age: {calculateAge(formData.dob)} years</p>
+                  <p style={{ color: 'var(--success)', fontSize: 11, marginTop: 4 }}>✓ Age: {calculateAge(formData.dob)} years</p>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Batch Year *</label>
+                <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Batch Year *</label>
                 <select
                   name="batchYear"
                   value={formData.batchYear}
@@ -628,24 +618,24 @@ export default function RegisterPage() {
                     <option key={year} value={year}>{year} {year === new Date().getFullYear() ? '(Current Year)' : ''}</option>
                   ))}
                 </select>
-                <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>
                   Auto‑filled from register number (must match)
                 </p>
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Department *</label>
+              <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Department *</label>
               {departments.length === 0 ? (
                 <>
-                  <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 8, color: '#F59E0B', fontSize: 13 }}>
+                  <div style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning)', borderRadius: 8, padding: '8px 12px', marginBottom: 8, color: 'var(--warning)', fontSize: 13 }}>
                     ⚠️ No departments available yet. Please contact administrator.
                   </div>
-                  <select disabled style={{ ...inputStyle, background: '#171B24', color: '#6B7280', cursor: 'not-allowed' }}>
+                  <select disabled style={{ ...inputStyle, background: 'var(--surface-2)', color: 'var(--text-muted)', cursor: 'not-allowed' }}>
                     <option>No departments available</option>
                   </select>
-                  <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
-                    Admin must create departments first. <Link href="/login" style={{ color: '#7C5CFF' }}>Login as admin</Link>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 4 }}>
+                    Admin must create departments first. <Link href="/login" style={{ color: 'var(--link)' }}>Login as admin</Link>
                   </p>
                 </>
               ) : (
@@ -665,7 +655,7 @@ export default function RegisterPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Password *</label>
+                <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Password *</label>
                 <div style={passwordContainerStyle}>
                   <input
                     name="password"
@@ -691,7 +681,7 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Confirm Password *</label>
+                <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Confirm Password *</label>
                 <div style={passwordContainerStyle}>
                   <input
                     name="confirmPassword"
@@ -703,7 +693,7 @@ export default function RegisterPage() {
                     style={{
                       ...inputStyle,
                       paddingRight: '40px',
-                      borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#EF4444' : '#222634',
+                      borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? 'var(--danger)' : 'var(--border)',
                     }}
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeButtonStyle}>
@@ -720,7 +710,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p style={{ color: '#F87171', fontSize: 11, marginTop: 4 }}>Passwords do not match</p>
+                  <p style={{ color: 'var(--danger)', fontSize: 11, marginTop: 4 }}>Passwords do not match</p>
                 )}
               </div>
             </div>
@@ -729,15 +719,22 @@ export default function RegisterPage() {
               type="submit"
               disabled={loading || !isFormValid()}
               style={{
-                width: '100%', background: '#7C5CFF', color: '#fff', border: 'none',
-                borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 500,
+                width: '100%',
+                background: 'var(--btn-primary-bg)',
+                color: 'var(--btn-primary-text)',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px',
+                fontSize: 14,
+                fontWeight: 500,
                 cursor: loading || !isFormValid() ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s', fontFamily: 'inherit',
+                transition: 'background 0.2s',
+                fontFamily: 'inherit',
                 marginTop: '0.5rem',
                 opacity: loading || !isFormValid() ? 0.6 : 1,
               }}
-              onMouseOver={(e) => { if (!loading && isFormValid()) e.target.style.background = '#6d4fe0'; }}
-              onMouseOut={(e) => { if (!loading && isFormValid()) e.target.style.background = '#7C5CFF'; }}
+              onMouseOver={(e) => { if (!loading && isFormValid()) e.target.style.background = 'var(--btn-primary-hover-bg)'; }}
+              onMouseOut={(e) => { if (!loading && isFormValid()) e.target.style.background = 'var(--btn-primary-bg)'; }}
             >
               {loading ? 'Registering...' : 'Register as Student'}
             </button>

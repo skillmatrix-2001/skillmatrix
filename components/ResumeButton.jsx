@@ -383,28 +383,13 @@ export default function ResumeButton({ regNo }) {
     { id: "docx", icon: "📘", label: "Word (.docx)", hint: "Best for editing" },
   ];
 
-  const theme = {
-    bg: "#0B0D12",
-    cardBg: "#12151C",
-    border: "#222634",
-    text: "#E5E7EB",
-    textMuted: "#6B7280",
-    accent: "#7C5CFF",
-    accentHover: "#6d4fe0",
-    errorBg: "rgba(239,68,68,0.1)",
-    errorBorder: "rgba(239,68,68,0.3)",
-    errorText: "#F87171",
-    successBg: "rgba(16,185,129,0.1)",
-    successBorder: "rgba(16,185,129,0.3)",
-    successText: "#10B981",
-  };
-
+  // All colours now driven by global variables
   const styles = {
     triggerBtn: {
       display: "inline-flex",
       alignItems: "center",
       gap: 8,
-      background: theme.accent,
+      background: "var(--btn-primary-bg)",
       color: "#fff",
       border: "none",
       padding: "9px 18px",
@@ -426,8 +411,8 @@ export default function ResumeButton({ regNo }) {
       animation: isClosing ? "fadeOut 0.2s ease-out forwards" : "fadeIn 0.2s ease-out",
     },
     modal: {
-      background: theme.cardBg,
-      border: `1px solid ${theme.border}`,
+      background: "var(--surface-1)",
+      border: "1px solid var(--border)",
       borderRadius: 16,
       padding: "1.75rem",
       width: 420,
@@ -445,20 +430,20 @@ export default function ResumeButton({ regNo }) {
       margin: 0,
       fontSize: 20,
       fontWeight: 700,
-      color: theme.text,
+      color: "var(--text-primary)",
     },
     closeBtn: {
       background: "none",
       border: "none",
       fontSize: 20,
       cursor: "pointer",
-      color: theme.textMuted,
+      color: "var(--text-dim)",
       padding: "4px 8px",
       borderRadius: 6,
       transition: "color 0.2s",
     },
     subtitle: {
-      color: theme.textMuted,
+      color: "var(--text-dim)",
       fontSize: 13,
       margin: "0 0 24px",
     },
@@ -474,7 +459,7 @@ export default function ResumeButton({ regNo }) {
       alignItems: "center",
       borderWidth: 2,
       borderStyle: "solid",
-      borderColor: theme.border,
+      borderColor: "var(--border)",
       borderRadius: 12,
       padding: "14px 8px",
       cursor: "pointer",
@@ -484,18 +469,18 @@ export default function ResumeButton({ regNo }) {
       transition: "all 0.2s",
     },
     formatCardActive: {
-      borderColor: theme.accent,
-      background: "rgba(124,92,255,0.1)",
+      borderColor: "var(--primary)",
+      background: "var(--primary-soft)",
     },
     formatLabel: {
       fontWeight: 600,
       fontSize: 14,
-      color: theme.text,
+      color: "var(--text-primary)",
       marginTop: 8,
     },
     formatHint: {
       fontSize: 11,
-      color: theme.textMuted,
+      color: "var(--text-dim)",
       marginTop: 2,
     },
     status: {
@@ -505,14 +490,14 @@ export default function ResumeButton({ regNo }) {
       marginBottom: 20,
     },
     statusSuccess: {
-      background: theme.successBg,
-      border: `1px solid ${theme.successBorder}`,
-      color: theme.successText,
+      background: "var(--success-soft)",
+      border: "1px solid var(--success)",
+      color: "var(--success)",
     },
     statusError: {
-      background: theme.errorBg,
-      border: `1px solid ${theme.errorBorder}`,
-      color: theme.errorText,
+      background: "var(--danger-soft)",
+      border: "1px solid var(--danger)",
+      color: "var(--danger)",
     },
     actions: {
       display: "flex",
@@ -520,18 +505,18 @@ export default function ResumeButton({ regNo }) {
       justifyContent: "flex-end",
     },
     cancelBtn: {
-      background: "transparent",
-      border: `1px solid ${theme.border}`,
+      background: "var(--btn-ghost-bg)",
+      border: "1px solid var(--btn-ghost-border)",
       borderRadius: 8,
       padding: "9px 18px",
-      color: theme.textMuted,
+      color: "var(--btn-ghost-text)",
       fontSize: 13,
       fontWeight: 500,
       cursor: "pointer",
       transition: "all 0.2s",
     },
     generateBtn: {
-      background: theme.accent,
+      background: "var(--btn-primary-bg)",
       color: "#fff",
       border: "none",
       borderRadius: 8,
@@ -542,7 +527,8 @@ export default function ResumeButton({ regNo }) {
       transition: "background 0.2s",
     },
     generateBtnDisabled: {
-      background: "rgba(124,92,255,0.5)",
+      background: "var(--primary)",
+      opacity: 0.5,
       cursor: "not-allowed",
     },
   };

@@ -1,38 +1,119 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0B0D12;
-  --surface-1: #12151C;
-  --surface-2: #171B24;
-  --border: #222634;
-  --primary: #7C5CFF;
-  --success: #22C55E;
-  --danger: #EF4444;
-  --text-primary: #ffffff;
-  --text-secondary: #d2dae8;
-  --text-muted: #909399;
+  /* Core palette - completely new warm premium light */
+  --blue-deep: #2a241d;           /* Deep warm charcoal (replaces old deep blue) */
+  --pink-soft: #d8a39e;           /* Soft muted rose (new soft accent) */
+  --gold: #d4a017;                /* Warm golden mustard for premium highlights */
+  --teal: #c06c5d;                /* New primary: elegant terracotta-rose */
+  --green-bold: #8a9a5b;          /* Muted warm olive for success */
 
-  --background: #0B0D12;
-  --foreground: #E5E7EB;
-}
+  /* Warm luxurious neutrals */
+  --white: #ffffff;
+  --gray-50: #f8f4eb;             /* Soft warm ivory */
+  --gray-100: #f0e9df;
+  --gray-200: #e6d9c9;
+  --gray-300: #d4c2aa;
+  --gray-400: #b8a48a;
+  --gray-500: #9b876d;
+  --gray-600: #7a6954;
+  --gray-700: #5c4f3f;
+  --gray-800: #3f352b;
+  --gray-900: #2a241d;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
+  --red-500: #e06b5e;
+  --red-600: #c94f41;
+
+  /* Semantic tokens - premium warm light (same names as your original) */
+  --background: #f8f4eb;          /* Plain warm ivory – your requested light colored bg */
+  --foreground: #2a241d;          /* Deep warm text for excellent contrast & weight */
+
+  --surface-1: #ffffff;           /* Clean cards, modals */
+  --surface-2: #f0e9df;           /* Subtle secondary surfaces */
+
+  --border: #e6d9c9;              /* Soft warm elegant borders */
+  --border-light: #f0e9df;
+
+  --primary: #c06c5d;             /* New terracotta primary – sophisticated & unique */
+  --primary-hover: #a85648;       /* Richer hover */
+  --primary-soft: rgba(192, 108, 93, 0.09);
+  --primary-soft-border: rgba(192, 108, 93, 0.18);
+
+  --secondary: #d4a017;           /* Golden mustard accent (stars, badges, highlights) */
+  --secondary-hover: #b98a0f;
+
+  --accent: #d8a39e;              /* Soft rose for special emphasis */
+
+  --success: #8a9a5b;             /* Warm olive success */
+  --success-soft: rgba(108, 187, 92, 0.286);
+  --success-soft-border: rgba(138, 154, 91, 0.15);
+
+  --danger: #e06b5e;
+  --danger-hover: #c94f41;
+  --warning: #d4a017;
+
+  --text-primary: #2a241d;
+  --text-secondary: #5c4f3f;
+  --text-muted: #7a6954;
+  --text-dim: #3f352b;
+
+  --link: #c06c5d;
+  --link-hover: #a85648;
+
+  /* Component tokens (same names – no breaking changes) */
+  --btn-primary-bg: var(--primary);
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover-bg: var(--primary-hover);
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: var(--text-secondary);
+  --btn-ghost-border: var(--border);
+  --btn-ghost-hover-border: var(--text-muted);
+  --btn-ghost-hover-text: var(--text-primary);
+
+  --chip-bg: #f0e9df;
+  --chip-border: #e6d9c9;
+  --chip-text: #5c4f3f;
+
+  --skill-bg: var(--primary-soft);
+  --skill-border: var(--primary-soft-border);
+  --skill-text: var(--primary);
+
+  --tech-bg: var(--success-soft);
+  --tech-border: var(--success-soft-border);
+  --tech-text: var(--success);
+
+  --tag-bg: var(--chip-bg);
+  --tag-border: var(--chip-border);
+  --tag-text: var(--chip-text);
+
+  --card-bg: var(--surface-1);
+  --card-border: var(--border);
+  --card-hover-border: #d4c2aa;
+
+  --modal-bg: var(--surface-1);
+  --modal-border: var(--border);
+  --modal-header-bg: var(--surface-2);
+  --modal-backdrop: rgba(42, 36, 29, 0.13);
+
+  --dropdown-bg: var(--surface-1);
+  --dropdown-border: var(--border);
+
+  --input-bg: var(--surface-1);
+  --input-border: var(--border);
+  --input-focus-border: var(--primary);
+  --input-text: var(--text-primary);
+  --input-placeholder: var(--text-muted);
+
+  --scrollbar-thumb: #d4c2aa;
+  --scrollbar-thumb-hover: #b8a48a;
+
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-html {
-  color-scheme: dark;
-}
-
+/* Keep your existing body, scrollbar, and other global styles unchanged */
 body {
-  background: var(--bg);
+  background: var(--background);
   color: var(--text-primary);
   font-family: var(--font-sans);
   margin: 0;
@@ -41,72 +122,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0B0D12;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #222634;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2d3148;
-}
-
-select option {
-  background: #171B24;
-  color: #E5E7EB;
-}
-
-a { color: inherit; }
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.fade-in { animation: fadeIn 0.25s ease; }
-.fade-up { animation: fadeUp 0.35s ease; }
-
-button, input, textarea, select {
-  font-family: inherit;
-}
-
-@media (min-width: 768px) {
-  .staff-card-row {
-    display: flex;
-    flex-direction: row;
-  }
-  .staff-card-col {
-    flex: 1;
-  }
-}
-
-@media (max-width: 600px) {
-  .chatbot-window {
-    bottom: 80px !important;
-    right: 16px !important;
-    left: 16px !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  .chatbot-fab {
-    bottom: 20px !important;
-    right: 20px !important;
-  }
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }

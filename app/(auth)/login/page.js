@@ -59,38 +59,139 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0D12', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <style jsx>{`
+        .auth-card {
+          background: var(--surface-1);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 2rem;
+        }
+        .auth-title {
+          color: var(--text-primary);
+          font-size: 28px;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .auth-subtitle {
+          color: var(--text-dim);
+          font-size: 14px;
+        }
+        .input-label {
+          display: block;
+          color: var(--text-dim);
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 6px;
+        }
+        .auth-input {
+          width: 100%;
+          background: var(--input-bg);
+          border: 1px solid var(--input-border);
+          border-radius: 8px;
+          padding: 10px 14px;
+          color: var(--input-text);
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.2s;
+          box-sizing: border-box;
+          font-family: inherit;
+        }
+        .auth-input:focus {
+          border-color: var(--input-focus-border);
+        }
+        .auth-input::placeholder {
+          color: var(--input-placeholder);
+        }
+        .auth-select {
+          width: 100%;
+          background: var(--input-bg);
+          border: 1px solid var(--input-border);
+          border-radius: 8px;
+          padding: 10px 14px;
+          color: var(--input-text);
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.2s;
+          box-sizing: border-box;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .auth-select:focus {
+          border-color: var(--input-focus-border);
+        }
+        .password-toggle {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          color: var(--text-dim);
+        }
+        .password-toggle:hover {
+          color: var(--text-secondary);
+        }
+        .submit-btn {
+          width: 100%;
+          background: var(--btn-primary-bg);
+          color: var(--btn-primary-text);
+          border: none;
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+          font-family: inherit;
+        }
+        .submit-btn:hover:not(:disabled) {
+          background: var(--btn-primary-hover-bg);
+        }
+        .submit-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .error-box {
+          background: var(--danger-soft);
+          border: 1px solid var(--danger);
+          border-radius: 8px;
+          padding: 12px 16px;
+          color: var(--danger);
+          font-size: 14px;
+        }
+      `}</style>
+
       <div style={{ maxWidth: 400, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ color: '#E5E7EB', fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Sign in</h2>
-          <p style={{ color: '#6B7280', fontSize: 14 }}>
+          <h2 className="auth-title">Sign in</h2>
+          <p className="auth-subtitle">
             Or{' '}
-            <Link href="/register" style={{ color: '#7C5CFF', textDecoration: 'none' }}>
+            <Link href="/register" style={{ color: 'var(--link)' }}>
               register as a student
             </Link>
           </p>
         </div>
 
-        <div style={{ background: '#12151C', border: '1px solid #222634', borderRadius: 16, padding: '2rem' }}>
+        <div className="auth-card">
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {error && (
-              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 16px', color: '#F87171', fontSize: 14 }}>
+              <div className="error-box">
                 {error}
               </div>
             )}
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>I am a</label>
+              <label className="input-label">I am a</label>
               <select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                style={{
-                  width: '100%', background: '#0B0D12', border: '1px solid #222634',
-                  borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
-                  outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
-                  fontFamily: 'inherit', cursor: 'pointer'
-                }}
+                className="auth-select"
                 required
               >
                 <option value="student">Student</option>
@@ -100,7 +201,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+              <label className="input-label">
                 {formData.role === 'student' ? 'Register Number' : formData.role === 'staff' ? 'Staff ID' : 'Username'}
               </label>
               <input
@@ -110,17 +211,12 @@ export default function LoginPage() {
                 value={formData.identifier}
                 onChange={handleChange}
                 placeholder={formData.role === 'student' ? '9513xxxxxx' : formData.role === 'staff' ? 'STAFF123' : 'admin'}
-                style={{
-                  width: '100%', background: '#0B0D12', border: '1px solid #222634',
-                  borderRadius: 8, padding: '10px 14px', color: '#E5E7EB', fontSize: 14,
-                  outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
-                  fontFamily: 'inherit'
-                }}
+                className="auth-input"
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', color: '#6B7280', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Password</label>
+              <label className="input-label">Password</label>
               <div style={{ position: 'relative' }}>
                 <input
                   name="password"
@@ -129,23 +225,13 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  style={{
-                    width: '100%', background: '#0B0D12', border: '1px solid #222634',
-                    borderRadius: 8, padding: '10px 14px', paddingRight: '40px',
-                    color: '#E5E7EB', fontSize: 14, outline: 'none',
-                    transition: 'border-color 0.2s', boxSizing: 'border-box',
-                    fontFamily: 'inherit'
-                  }}
+                  className="auth-input"
+                  style={{ paddingRight: '40px' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: 0, display: 'flex', alignItems: 'center',
-                    color: '#6B7280'
-                  }}
+                  className="password-toggle"
                 >
                   {showPassword ? (
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,19 +250,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{
-                width: '100%', background: '#7C5CFF', color: '#fff', border: 'none',
-                borderRadius: 8, padding: '10px', fontSize: 14, fontWeight: 500,
-                cursor: 'pointer', transition: 'background 0.2s', fontFamily: 'inherit'
-              }}
-              onMouseOver={(e) => (e.target.style.background = '#6d4fe0')}
-              onMouseOut={(e) => (e.target.style.background = '#7C5CFF')}
+              className="submit-btn"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
 
-            <div style={{ textAlign: 'center' }}>
-              <Link href="/forgot-password" style={{ color: '#7C5CFF', fontSize: 14, textDecoration: 'none' }}>
+            {/* Forgot password link with inline color */}
+            <div style={{ textAlign: 'center', color: 'var(--link)' }}>
+              <Link href="/forgot-password" style={{ color: 'inherit', textDecoration: 'none' }}>
                 Forgot Password?
               </Link>
             </div>

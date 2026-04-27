@@ -8,7 +8,6 @@ export default function PDFGenerator({ students, filters, staffUser, reportType,
   const generatePDF = async () => {
     setGenerating(true);
     try {
-      // Dynamic import of jspdf and jspdf-autotable – only runs in browser
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
 
@@ -17,7 +16,6 @@ export default function PDFGenerator({ students, filters, staffUser, reportType,
       const pageH = doc.internal.pageSize.getHeight();
       const margin = 18;
 
-      // Logo (optional)
       let logoBase64 = null;
       try {
         const res = await fetch('/logo.png');
@@ -39,7 +37,6 @@ export default function PDFGenerator({ students, filters, staffUser, reportType,
         ? (parseInt(filters.semester) % 2 === 0 ? 'Even Sem' : 'Odd Sem')
         : '';
 
-      // ── HEADER ──
       const topY = 14;
       const logoSize = 11;
 
@@ -85,32 +82,28 @@ export default function PDFGenerator({ students, filters, staffUser, reportType,
       doc.text(reportLabel, pageW / 2, y, { align: 'center' });
       y += 9;
 
-      // Info lines
-      // Info lines
-doc.setFont('times', 'bold');
-doc.setFontSize(10);
-doc.text(`Dept.: ${dept}`, margin, y);
-y += 6;
-doc.text(`Batch: ${batchVal}`, margin, y);
-y += 6;
-doc.text(
-  `Semester: ${semVal}${semOddEven ? ` (${semOddEven})` : ''}`,
-  margin,
-  y
-);
-y += 6;
+      doc.setFont('times', 'bold');
+      doc.setFontSize(10);
+      doc.text(`Dept.: ${dept}`, margin, y);
+      y += 6;
+      doc.text(`Batch: ${batchVal}`, margin, y);
+      y += 6;
+      doc.text(
+        `Semester: ${semVal}${semOddEven ? ` (${semOddEven})` : ''}`,
+        margin,
+        y
+      );
+      y += 6;
 
-// Date range filter if applied
-if (filters.dateFrom || filters.dateTo) {
-  const fromStr = filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString('en-GB') : 'Start';
-  const toStr = filters.dateTo ? new Date(filters.dateTo).toLocaleDateString('en-GB') : 'End';
-  doc.text(`Date Range: ${fromStr} – ${toStr}`, margin, y);
-  y += 6;
-}
+      if (filters.dateFrom || filters.dateTo) {
+        const fromStr = filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString('en-GB') : 'Start';
+        const toStr = filters.dateTo ? new Date(filters.dateTo).toLocaleDateString('en-GB') : 'End';
+        doc.text(`Date Range: ${fromStr} – ${toStr}`, margin, y);
+        y += 6;
+      }
 
-y += 4; // small extra spacing before table
+      y += 4;
 
-      // Build table rows
       const isCert = reportType === 'certificates';
       const rows = [];
       let sno = 1;
@@ -193,7 +186,7 @@ y += 4; // small extra spacing before table
       alert('Failed to generate PDF. Please try again.');
     } finally {
       setGenerating(false);
-      onClose(); // close the modal after generation
+      onClose();
     }
   };
 
@@ -201,22 +194,22 @@ y += 4; // small extra spacing before table
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div
         style={{
-          background: '#12151C',
-          border: '1px solid #222634',
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
           borderRadius: 20,
           width: '100%',
           maxWidth: 400,
           padding: '1.5rem',
         }}
       >
-        <h2 style={{ color: '#E5E7EB', fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+        <h2 style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
           Download Report
         </h2>
-        <p style={{ color: '#6B7280', fontSize: 13, marginBottom: 20 }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: 13, marginBottom: 20 }}>
           Generates a PDF with the current filters applied ({students.length} students).
         </p>
 
-        <p style={{ color: '#9CA3AF', fontSize: 12, fontWeight: 500, marginBottom: 12 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, marginBottom: 12 }}>
           Include in report:
         </p>
 
@@ -232,14 +225,14 @@ y += 4; // small extra spacing before table
                 alignItems: 'flex-start',
                 gap: 12,
                 padding: '12px',
-                background: reportType === opt.value ? '#171B24' : 'transparent',
-                border: `1px solid ${reportType === opt.value ? '#7C5CFF' : '#222634'}`,
+                background: reportType === opt.value ? 'var(--surface-2)' : 'transparent',
+                border: `1px solid ${reportType === opt.value ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: 12,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                if (reportType !== opt.value) e.currentTarget.style.background = '#171B24';
+                if (reportType !== opt.value) e.currentTarget.style.background = 'var(--surface-2)';
               }}
               onMouseOut={(e) => {
                 if (reportType !== opt.value) e.currentTarget.style.background = 'transparent';
@@ -251,13 +244,13 @@ y += 4; // small extra spacing before table
                 value={opt.value}
                 checked={reportType === opt.value}
                 onChange={(e) => onReportTypeChange(e.target.value)}
-                style={{ marginTop: 2, accentColor: '#7C5CFF' }}
+                style={{ marginTop: 2, accentColor: 'var(--primary)' }}
               />
               <div>
-                <p style={{ color: '#E5E7EB', fontSize: 14, fontWeight: 500, marginBottom: 2 }}>
+                <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, marginBottom: 2 }}>
                   {opt.label}
                 </p>
-                <p style={{ color: '#6B7280', fontSize: 12 }}>
+                <p style={{ color: 'var(--text-dim)', fontSize: 12 }}>
                   {opt.desc}
                 </p>
               </div>
@@ -268,25 +261,26 @@ y += 4; // small extra spacing before table
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={onClose}
+            className="action-btn-ghost"
             style={{
               flex: 1,
-              background: 'transparent',
-              border: '1px solid #222634',
+              background: 'var(--btn-ghost-bg)',
+              border: '1px solid var(--btn-ghost-border)',
               borderRadius: 10,
               padding: '10px',
-              color: '#9CA3AF',
+              color: 'var(--btn-ghost-text)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => {
-              e.target.style.borderColor = '#9CA3AF';
-              e.target.style.color = '#E5E7EB';
+              e.target.style.borderColor = 'var(--btn-ghost-hover-border)';
+              e.target.style.color = 'var(--btn-ghost-hover-text)';
             }}
             onMouseOut={(e) => {
-              e.target.style.borderColor = '#222634';
-              e.target.style.color = '#9CA3AF';
+              e.target.style.borderColor = 'var(--btn-ghost-border)';
+              e.target.style.color = 'var(--btn-ghost-text)';
             }}
           >
             Cancel
@@ -296,11 +290,11 @@ y += 4; // small extra spacing before table
             disabled={generating}
             style={{
               flex: 1,
-              background: '#7C5CFF',
+              background: 'var(--btn-primary-bg)',
               border: 'none',
               borderRadius: 10,
               padding: '10px',
-              color: '#fff',
+              color: 'var(--btn-primary-text)',
               fontSize: 13,
               fontWeight: 500,
               cursor: generating ? 'not-allowed' : 'pointer',
@@ -311,8 +305,8 @@ y += 4; // small extra spacing before table
               opacity: generating ? 0.6 : 1,
               transition: 'background 0.2s',
             }}
-            onMouseOver={(e) => { if (!generating) e.target.style.background = '#6d4fe0'; }}
-            onMouseOut={(e) => { if (!generating) e.target.style.background = '#7C5CFF'; }}
+            onMouseOver={(e) => { if (!generating) e.target.style.background = 'var(--btn-primary-hover-bg)'; }}
+            onMouseOut={(e) => { if (!generating) e.target.style.background = 'var(--btn-primary-bg)'; }}
           >
             {generating ? (
               <>
