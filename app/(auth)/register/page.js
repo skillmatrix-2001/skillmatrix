@@ -226,6 +226,13 @@ export default function RegisterPage() {
 
   const { showAlert, AlertComponent } = useCustomAlert();
 
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      router.push('/feed');
+    }
+  }, [router]);
+
   const generateBatchYears = () => {
     const years = [];
     const currentYear = new Date().getFullYear();

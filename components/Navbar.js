@@ -49,13 +49,16 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // Hide navbar on landing page
+  if (pathname === '/landing') return null;
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
     setShowUserMenu(false);
     window.dispatchEvent(new Event('authChange'));
-    router.push('/login');
+    router.push('/landing');
   };
 
   const handleJobsClick = () => {

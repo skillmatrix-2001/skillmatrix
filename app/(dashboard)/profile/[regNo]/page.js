@@ -817,10 +817,10 @@ const Block = ({ title, children }) => (
   <div
     style={{
       background: 'var(--surface-2)',
-      border: '1px solid var(--border)',
       borderRadius: 12,
       padding: '1.25rem',
       marginBottom: 12,
+      border: 'none',
     }}
   >
     <span
@@ -1011,7 +1011,7 @@ function ResumeSection({ user, isOwnProfile, regNo, onUpdate, showAlert, loggedI
               <button onClick={handleCancel} className="action-btn-ghost">Cancel</button>
             </>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="action-btn-ghost">Edit Resume</button>
+            <button onClick={() => setIsEditing(true)} className="action-btn-ghost">Edit</button>
           )
         )}
         {showResumeButton && <ResumeButton regNo={regNo} />}
@@ -2981,16 +2981,21 @@ export default function ProfilePage() {
         .delete-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; transition: color 0.2s; font-family: inherit; padding: 4px; }
         .delete-btn:hover { color: var(--danger); }
         .cert-card {
-          background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px;
-          transition: border-color 0.2s;
+          background: var(--surface-2); /* subtle warm background */
+          border: none;                /* no border */
+          border-radius: 12px; 
+          padding: 20px;
+          transition: background 0.2s;
         }
-        .cert-card:hover { border-color: var(--card-hover-border); }
+        .cert-card:hover { background: var(--border); } /* darker tone on hover */
         .section-label {
           color: var(--text-dim); font-size: 11px; text-transform: uppercase;
           letter-spacing: 0.08em; margin-bottom: 10px; display: block;
         }
+        /* Responsive adjustments */
         @media (max-width: 1024px) {
           .profile-grid { grid-template-columns: 1fr !important; }
+          .profile-sidebar { position: static !important; top: auto !important; }
         }
         @media (max-width: 640px) {
           .tab-btn { padding: 12px 12px; font-size: 10px; }
@@ -2999,8 +3004,15 @@ export default function ProfilePage() {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
         <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: '1.5rem', alignItems: 'start' }}>
-          {/* LEFT COLUMN */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* LEFT COLUMN – STICKY SIDEBAR */}
+          <div className="profile-sidebar" style={{ 
+            position: 'sticky', 
+            top: '1vh', 
+            alignSelf: 'start', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '1rem' 
+          }}>
             <div className="profile-card" style={{ padding: '1.75rem 1.5rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
                 <div style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px', background: 'linear-gradient(135deg, var(--primary-soft), var(--primary-soft-border))', border: '1px solid var(--primary-soft-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3067,7 +3079,7 @@ export default function ProfilePage() {
                 <>
                   <button onClick={() => setActiveTab('certificates')} className={`tab-btn ${activeTab === 'certificates' ? 'active' : 'inactive'}`}>Certificates</button>
                   <button onClick={() => setActiveTab('projects')} className={`tab-btn ${activeTab === 'projects' ? 'active' : 'inactive'}`}>Projects</button>
-                  <button onClick={() => setActiveTab('resume')} className={`tab-btn ${activeTab === 'resume' ? 'active' : 'inactive'}`}>Resume</button>
+                  <button onClick={() => setActiveTab('resume')} className={`tab-btn ${activeTab === 'resume' ? 'active' : 'inactive'}`}>Personal Details</button>
                 </>
               ) : (
                 <button className="tab-btn active">Certificates</button>
