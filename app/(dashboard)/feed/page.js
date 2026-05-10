@@ -637,10 +637,10 @@ function FeedContent() {
         fetchPosts();
       } catch (err) {
         console.error('Error parsing user data:', err);
-        router.push('/login');
+        router.push('/landing');
       }
     } else {
-      router.push('/login');
+      router.push('/landing');
     }
   }, []);
 

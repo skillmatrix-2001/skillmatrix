@@ -32,7 +32,7 @@ export default function LandingPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  /* ── canvas: drifting dot field + cursor repulsion ───────────── */
+  /* ── canvas: drifting dot field + cursor repulsion with slow return ── */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -48,72 +48,87 @@ export default function LandingPage() {
 
     const SP = window.innerWidth < 768 ? 40 : 30;
     const R0 = 1.4;
-
-    // Cursor repulsion
     const INF = 160;
     const STR = 55;
 
-    // Autonomous drift — make these large enough to *see* clearly
-    const DRIFT_AMP_X = 6;     // px travel on X axis
-    const DRIFT_AMP_Y = 5;     // px travel on Y axis (slightly different → elliptical path)
-    const DRIFT_SPEED = 0.0009; // radians per ms — ~one full cycle every ~7 s
+    const DRIFT_AMP_X  = 6;
+    const DRIFT_AMP_Y  = 5;
+    const DRIFT_SPEED  = 0.0009;
+
+    const MAX_COLS = 160;
+    const MAX_ROWS = 120;
+    const dotState = new Float32Array(MAX_COLS * MAX_ROWS * 3);
 
     const startTime = performance.now();
+    let lastTime    = startTime;
 
     const draw = (now) => {
+      const dt = Math.min(now - lastTime, 100);
+      lastTime = now;
       const elapsed = now - startTime;
+
       ctx.clearRect(0, 0, W, H);
 
-      // Scroll offset makes dots drift with page
-      const sOff = (scrollRef.current * 0.22) % SP;
-      const cols  = Math.ceil(W / SP) + 2;
-      const rows  = Math.ceil(H / SP) + 4;
+      const engageFactor = 1 - Math.exp(-dt / 40);
+      const returnFactor = 1 - Math.exp(-dt / 2100);
+
+      // Remove scroll-dependent vertical offset to stop dots “resetting”
+      const cols  = Math.min(Math.ceil(W / SP) + 2, MAX_COLS);
+      const rows  = Math.min(Math.ceil(H / SP) + 4, MAX_ROWS);
 
       for (let c = 0; c < cols; c++) {
         for (let r = 0; r < rows; r++) {
-          // Grid anchor
           const bx = c * SP - SP;
-          const by = r * SP - SP + sOff;
+          const by = r * SP - SP;                    // ← fixed: no scroll offset
 
-          // ── Autonomous drift ────────────────────────────────
-          // Each dot has a unique phase so they never all move together.
-          // Two slightly different frequencies on X vs Y
-          // creates a gentle elliptical/figure-8 path per dot.
           const phaseX = (c * 1.7  + r * 2.3)  % (Math.PI * 2);
           const phaseY = (c * 2.9  + r * 1.13) % (Math.PI * 2);
+          const autoX  = Math.sin(elapsed * DRIFT_SPEED        + phaseX) * DRIFT_AMP_X;
+          const autoY  = Math.cos(elapsed * DRIFT_SPEED * 1.27 + phaseY) * DRIFT_AMP_Y;
 
-          const autoX = Math.sin(elapsed * DRIFT_SPEED        + phaseX) * DRIFT_AMP_X;
-          const autoY = Math.cos(elapsed * DRIFT_SPEED * 1.27 + phaseY) * DRIFT_AMP_Y;
-
-          // Drifted resting position
           const rx = bx + autoX;
           const ry = by + autoY;
 
-          // ── Cursor repulsion from drifted position ──────────
           const dx   = mouseRef.current.x - rx;
           const dy   = mouseRef.current.y - ry;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
-          let x = rx, y = ry, alpha = 0.22, rad = R0;
-
+          let targetDx = 0, targetDy = 0, targetInf = 0;
           if (dist < INF) {
             const frac = 1 - dist / INF;
             const ease = frac * frac * (3 - 2 * frac);
             const ang  = Math.atan2(dy, dx);
-            x     = rx - Math.cos(ang) * ease * STR;
-            y     = ry - Math.sin(ang) * ease * STR;
-            alpha = 0.22 + ease * 0.62;
-            rad   = R0  + ease * 2.6;
+            targetDx  = -Math.cos(ang) * ease * STR;
+            targetDy  = -Math.sin(ang) * ease * STR;
+            targetInf = ease;
           }
+
+          const idx = (c * MAX_ROWS + r) * 3;
+          const t = targetInf > dotState[idx + 2] ? engageFactor : returnFactor;
+          dotState[idx]     += (targetDx  - dotState[idx])     * t;
+          dotState[idx + 1] += (targetDy  - dotState[idx + 1]) * t;
+          dotState[idx + 2] += (targetInf - dotState[idx + 2]) * t;
+
+          const newDx  = dotState[idx];
+          const newDy  = dotState[idx + 1];
+          const newInf = dotState[idx + 2];
+
+          const x = rx + newDx;
+          const y = ry + newDy;
+
+          const cr    = Math.round(28 + newInf * (184 - 28));
+          const cg    = Math.round(24 + newInf * (92  - 24));
+          const cb    = Math.round(20 + newInf * (72  - 20));
+          const alpha = 0.38 + newInf * 0.54;       // ← base opacity increased from 0.22
+          const rad   = R0   + newInf * 2.6;
 
           ctx.beginPath();
           ctx.arc(x, y, rad, 0, Math.PI * 2);
-          ctx.fillStyle = dist < INF
-            ? `rgba(184,92,72,${alpha})`
-            : `rgba(28,24,20,${alpha})`;
+          ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
           ctx.fill();
         }
       }
+
       rafRef.current = requestAnimationFrame(draw);
     };
     rafRef.current = requestAnimationFrame(draw);
@@ -124,7 +139,7 @@ export default function LandingPage() {
     };
   }, []);
 
-  /* ── mouse tracking ──────────────────────────────────────────── */
+  /* ── mouse tracking ── */
   useEffect(() => {
     const move = (e) => {
       mouseRef.current        = { x: e.clientX, y: e.clientY };
@@ -180,22 +195,49 @@ export default function LandingPage() {
   const shrink = () => cursorRingRef.current?.classList.remove("cx");
 
   const features = [
-    { n:"01", title:"Portfolio Builder",      desc:"A living digital portfolio for your projects, skills, and achievements — instantly shareable with any employer." },
-    { n:"02", title:"Connect & Collaborate",  desc:"Network with peers, faculty, and alumni. Find study groups, project partners, and mentors in your community." },
-    { n:"03", title:"Showcase Achievements",  desc:"Document awards, certifications, and volunteer work. Earn the recognition your effort deserves." },
-    { n:"04", title:"Discover Opportunities", desc:"Internships, job postings, and research openings curated to your field and skills." },
-    { n:"05", title:"Personalised Feed",      desc:"Updates from your connections and orgs — never miss news or events that matter in your academic life." },
-    { n:"06", title:"Skill Matching",         desc:"Track expertise and get project and role recommendations aligned with where you want to grow." },
+    {
+      n:"01",
+      title:"Digital Portfolio",
+      desc:"Upload certificates, projects, and achievements with descriptions, tech stacks, and links — building a verified academic portfolio that speaks for you.",
+    },
+    {
+      n:"02",
+      title:"AI Career Chatbot",
+      desc:"Ask anything about placement, resumes, or career paths. Our FastAPI-powered chatbot uses an LLM to give you real, personalised guidance anytime.",
+    },
+    {
+      n:"03",
+      title:"Achievement Feed",
+      desc:"A live activity stream of everything your peers are uploading — certificates, projects, and milestones — so the best work never goes unnoticed.",
+    },
+    {
+      n:"04",
+      title:"Live Job Listings",
+      desc:"Real-time job and internship opportunities pulled from external APIs, filtered to match your skills, department, and career interests.",
+    },
+    {
+      n:"05",
+      title:"Role-Based Access",
+      desc:"Separate, secure dashboards for Students, Staff, and Admins — each with the right tools. Staff can review, admins can manage, students can shine.",
+    },
+    {
+      n:"06",
+      title:"Instant Resume Export",
+      desc:"Generate a professional, formatted resume directly from your SkillMatrix profile — pulling in your skills, education, projects, and certificates automatically.",
+    },
   ];
 
   const stats  = [
-    { v:"100%", l:"College verified" },
-    { v:"6",    l:"Core tools" },
-    { v:"∞",    l:"Connections" },
-    { v:"Free", l:"Always for students" },
+    { v:"3",     l:"User roles" },
+    { v:"7",     l:"Core modules" },
+    { v:"100%",  l:"College verified" },
+    { v:"Free",  l:"Always for students" },
   ];
 
-  const mWords = ["Portfolio","Achievement","Network","Collaboration","Skills","Opportunity","Community","Growth"];
+  const mWords = [
+    "Portfolio","Certificates","Projects","Placement",
+    "Chatbot","Achievements","Career","Skills",
+  ];
 
   return (
     <div style={{ background:"#f2ede6", color:"#1c1814",
@@ -358,43 +400,55 @@ export default function LandingPage() {
           marginBottom:"clamp(18px,3vh,30px)",
           transitionDelay:".25s",
         }}>
-          College Network — Est. 2026
+          Academic Portfolio Platform — Est. 2026
         </p>
 
-        <h1 aria-label="Build Your Future" style={{
+        <h1 aria-label="SkillMatrix — Achievement Tracking System" style={{
           fontFamily:"'Cormorant',serif", fontWeight:600,
-          fontSize:"clamp(52px,11vw,148px)", lineHeight:.92,
+          fontSize:"clamp(44px,8.5vw,118px)", lineHeight:.92,
           letterSpacing:"-.025em",
         }}>
           {[
-            { w:"Build",  d:".40s" },
-            { w:"\u00A0", d:".46s" },
-            { w:"Your",   d:".52s" },
-            { w:"\u00A0", d:".56s" },
-          ].map((x,k)=>(
+            { w:"Skill",  d:".40s" },
+            { w:"Matrix", d:".48s" },
+          ].map((x, k) => (
             <span key={k} className={`hw ${heroReady?"go":""}`}
               style={{ transitionDelay:x.d, color:"#1c1814" }}>{x.w}</span>
           ))}
+
           <br />
+
           <span className={`hw ${heroReady?"go":""}`}
-            style={{ transitionDelay:".62s", color:"#b85c48", fontStyle:"italic" }}>
-            Future
+            style={{ transitionDelay:".57s", color:"#b85c48", fontStyle:"italic" }}>
+            Achievement
           </span>
+
+          <br />
+
+          {[
+            { w:"Tracking", d:".66s" },
+            { w:"\u00A0",   d:".70s" },
+            { w:"System",   d:".74s" },
+          ].map((x, k) => (
+            <span key={k} className={`hw ${heroReady?"go":""}`}
+              style={{ transitionDelay:x.d, color:"#1c1814" }}>{x.w}</span>
+          ))}
         </h1>
 
         <div className={`hf ${heroReady?"go":""}`} style={{
           marginTop:"clamp(28px,5vh,52px)",
           display:"flex", justifyContent:"space-between",
           alignItems:"flex-end", flexWrap:"wrap", gap:"28px",
-          transitionDelay:".86s",
+          transitionDelay:".90s",
         }}>
           <p style={{
             fontFamily:"'DM Sans',sans-serif", fontWeight:500,
             fontSize:"clamp(13px,1.4vw,16px)", lineHeight:1.78,
-            color:"rgba(28,24,20,.72)", maxWidth:"360px",
+            color:"rgba(28,24,20,.72)", maxWidth:"400px",
           }}>
-            A college-only platform to showcase achievements, build portfolios,
-            and connect with the opportunities that shape your career.
+            A centralised platform for college students to manage certificates,
+            showcase projects, track achievements, and connect with real career
+            opportunities — all in one place.
           </p>
 
           <div className="hbtns" style={{ display:"flex", gap:"12px", flexShrink:0 }}>
@@ -464,7 +518,7 @@ export default function LandingPage() {
                 fontFamily:"'DM Sans',sans-serif", fontSize:"10px", fontWeight:600,
                 letterSpacing:".24em", textTransform:"uppercase",
                 color:"rgba(184,92,72,.95)", marginBottom:"18px",
-              }}>What We Offer</p>
+              }}>Platform Modules</p>
 
               <h2 className={`sr ${revealed.feat?"v":""}`} style={{
                 fontFamily:"'Cormorant',serif", fontWeight:600,
@@ -472,8 +526,8 @@ export default function LandingPage() {
                 letterSpacing:"-.02em", color:"#1c1814",
                 transitionDelay:".08s",
               }}>
-                Everything to make you{" "}
-                <em style={{ color:"#b85c48" }}>stand out</em>
+                Every tool to make your{" "}
+                <em style={{ color:"#b85c48" }}>work visible</em>
               </h2>
 
               <p className={`sr ${revealed.feat?"v":""}`} style={{
@@ -482,8 +536,9 @@ export default function LandingPage() {
                 color:"rgba(28,24,20,.65)", marginTop:"22px",
                 maxWidth:"320px", transitionDelay:".18s",
               }}>
-                Six interconnected tools designed for college students who want
-                their work to be discovered.
+                Seven interconnected modules — from certificate uploads and
+                AI-powered career guidance to live job listings and role-based
+                admin control.
               </p>
 
               <div className={`sr ${revealed.feat?"v":""}`}
@@ -510,7 +565,7 @@ export default function LandingPage() {
                   fontFamily:"'DM Sans',sans-serif", fontSize:"10px", fontWeight:600,
                   letterSpacing:".2em", textTransform:"uppercase",
                   color:"rgba(28,24,20,.38)", marginTop:"14px",
-                }}>Your skills, orbiting together</p>
+                }}>Your achievements, orbiting together</p>
               </div>
             </div>
 
@@ -590,7 +645,7 @@ export default function LandingPage() {
             fontFamily:"'DM Sans',sans-serif", fontSize:"10px", fontWeight:600,
             letterSpacing:".24em", textTransform:"uppercase",
             color:"rgba(184,92,72,.95)", marginBottom:"20px",
-          }}>Join the community</p>
+          }}>Build your academic profile</p>
 
           <h2 className={`sr ${revealed.cta?"v":""}`} style={{
             fontFamily:"'Cormorant',serif", fontWeight:600,
@@ -634,7 +689,7 @@ export default function LandingPage() {
         <span style={{
           fontFamily:"'Cormorant',serif", fontWeight:600,
           fontSize:"13px", fontStyle:"italic", color:"rgba(28,24,20,.38)",
-        }}>For students, by students</span>
+        }}>Centralising achievement, one student at a time</span>
       </footer>
 
     </div>

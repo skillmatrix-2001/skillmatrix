@@ -8,7 +8,7 @@ export default function HomePage() {
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (user) {
-      router.push('/feed');
+      router.push('/(dashboard)/feed');
     } else {
       router.push('/landing');
     }
